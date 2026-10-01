@@ -10,11 +10,11 @@ const publicRoutes = [
     component: ClientInvoices,
   },
   {
-    path:routes.clientInvoiceDetail, 
+    path:routes.createClientInvoice, 
     component:ClientInvoiceEditor
   }, 
   {
-    path:routes.clientInvoiceEditor, 
+    path:routes.editClientInvoice, 
     component:ClientInvoiceEditor
   },
   {

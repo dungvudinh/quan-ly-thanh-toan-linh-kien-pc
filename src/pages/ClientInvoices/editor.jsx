@@ -1,11 +1,12 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
+import { useParams, useNavigate } from 'react-router-dom';
 import { createInvoice, updateInvoice, updateInvoicePaid } from '../../redux/actions/invoiceActions.js';
 import { priceFor, bonusFor, fmtUSD } from '../../utils/pricing.js';
 import AddModel from '../../components/AddModel.jsx';
 import { notifySuccess, notifyWarning } from '../../utils/toast.js';
 import { Printer } from 'lucide-react';
-
+import { initialInvoices,initialModels } from '../../data/mockData.js'; // Đường dẫn tới file mockData
 const DEFAULT_FROM = {
   name: 'Lạc Việt Studio',
   email: 'lacvietstu@gmail.com',
@@ -14,19 +15,49 @@ const DEFAULT_FROM = {
 
 const EMPTY_TO = { name: '', email: '', address: '' };
 
-function ClientInvoiceEditor({ invoice, onDone, onPrint }) {
+function ClientInvoiceEditor() {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const { id } = useParams(); // Lấy id từ URL (undefined nếu là /create)
+
   const clientPrices = useSelector((s) => s.clientPrices);
   const freelancerPrices = useSelector((s) => s.freelancerPrices);
 
-  const isCreateMode = invoice === null;
+  // Xác định mode dựa trên sự tồn tại của id
+  const isCreateMode = !id;
+  // Lấy invoice từ mockData dựa trên id
+  const invoice = useMemo(() => {
+    if (isCreateMode) return null;
+    return initialInvoices.find((inv) => inv.id === id) ?? null;
+  }, [id, isCreateMode]);
 
   const [isModelModalOpen, setIsModelModalOpen] = useState(false);
 
   // Draft state — nguồn dữ liệu duy nhất, luôn cho phép chỉnh sửa
-  const [draftFrom, setDraftFrom] = useState(invoice?.from ?? DEFAULT_FROM);
-  const [draftTo, setDraftTo] = useState(invoice?.to ?? EMPTY_TO);
-  const [draftModels, setDraftModels] = useState(invoice?.models ?? []);
+  const [draftFrom, setDraftFrom] = useState(DEFAULT_FROM);
+  const [draftTo, setDraftTo] = useState(EMPTY_TO);
+  const [draftModels, setDraftModels] = useState([]);
+
+  // Đồng bộ draft state khi invoice thay đổi (lần đầu load hoặc khi id đổi)
+  useEffect(() => {
+    if (invoice) {
+      setDraftFrom(invoice.from ?? DEFAULT_FROM);
+      setDraftTo(invoice.to ?? EMPTY_TO);
+      setDraftModels(invoice.models ?? []);
+    } else {
+      // Create mode
+      setDraftFrom(DEFAULT_FROM);
+      setDraftTo(EMPTY_TO);
+      setDraftModels([]);
+    }
+  }, [invoice]);
+  // Xử lý trường hợp id không hợp lệ (chỉ ở edit mode)
+  useEffect(() => {
+    if (!isCreateMode && !invoice) {
+      notifyWarning('Không tìm thấy hóa đơn!');
+      // navigate('/client-invoices');
+    }
+  }, [isCreateMode, invoice, navigate]);
 
   const total = useMemo(
     () =>
@@ -74,16 +105,51 @@ function ClientInvoiceEditor({ invoice, onDone, onPrint }) {
       notifySuccess('Đã tạo hóa đơn mới!');
     } else {
       dispatch(updateInvoice(invoice.id, { from: draftFrom, to: draftTo, models: draftModels }));
-      notifySuccess('Đã lưu thay đổi hóa đơn');
+      notifySuccess(`Đã lưu hóa đơn ${invoice.id}`);
     }
 
-    onDone?.();
+    navigate('/client-invoices'); // Quay về danh sách
   };
 
   const handleTogglePaid = () => {
-    dispatch(updateInvoicePaid(invoice.id, !invoice.paid));
-    notifySuccess(invoice.paid ? 'Đã chuyển về Chưa thanh toán' : 'Đã đánh dấu Đã thanh toán');
+  if (!invoice) return;
+
+  const nextPaid = !invoice.paid;
+
+  // 1. Cập nhật trạng thái paid của invoice
+  dispatch(updateInvoicePaid(invoice.id, nextPaid));
+
+  // 2. Cập nhật clientPaid cho các model tương ứng trong initialModels
+  //    (chỉ cập nhật những model thuộc invoice hiện tại)
+  const modelIdsInInvoice = new Set(
+    (invoice.models ?? []).map((m) => m.id)
+  );
+
+  initialModels.forEach((m) => {
+    if (modelIdsInInvoice.has(m.id)) {
+      m.clientPaid = nextPaid;
+    }
+  });
+
+  // 3. Cập nhật draftModels để UI phản ánh ngay
+  setDraftModels((prev) =>
+    prev.map((m) => ({ ...m, clientPaid: nextPaid }))
+  );
+
+  notifySuccess(
+    nextPaid ? 'Đã đánh dấu Đã thanh toán' : 'Đã chuyển về Chưa thanh toán'
+  );
+};
+
+  const handleBack = () => {
+    navigate('/client-invoices');
   };
+
+  // Nếu đang ở edit mode mà chưa tìm thấy invoice, không render gì
+  // (useEffect sẽ điều hướng về danh sách)
+  if (!isCreateMode && !invoice) {
+    return null;
+  }
 
   return (
     <div className="rounded-2xl border border-gray-100 bg-white shadow-sm p-6 space-y-6">
@@ -101,7 +167,7 @@ function ClientInvoiceEditor({ invoice, onDone, onPrint }) {
             {!isCreateMode && (
                 <span
                 className={`text-xs font-medium px-2 py-1 rounded-full ${
-                    invoice.paid ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600 d-block'
+                    invoice.paid ? ' text-emerald-600' : ' text-amber-600 d-block'
                 }`}
                 >
                 {invoice.paid ? 'Đã thanh toán' : 'Chưa thanh toán'}
@@ -112,12 +178,12 @@ function ClientInvoiceEditor({ invoice, onDone, onPrint }) {
         
         <div className="flex items-center gap-3">
           {!isCreateMode && (
-            <button type="button" onClick={onPrint} className="text-sm font-medium text-gray-600 hover:text-gray-900 flex flex-row items-center cursor-pointer mr-4">
+            <button type="button" onClick={() => navigate(`/client-invoices/${invoice.id}/print`)} className="text-sm font-medium text-gray-600 hover:text-gray-900 flex flex-row items-center cursor-pointer mr-4">
               <Printer width={16} className='mr-2'/>
               In hóa đơn
             </button>
           )}
-          <button type="button" onClick={onDone} className="text-sm text-gray-500 hover:text-gray-800">
+          <button type="button" onClick={handleBack} className="text-sm text-gray-500 hover:text-gray-800">
             ← Quay lại danh sách
           </button>
         </div>
@@ -204,7 +270,7 @@ function ClientInvoiceEditor({ invoice, onDone, onPrint }) {
               <th className="pb-2 px-3 text-right">Đơn giá</th>
               <th className="pb-2 px-3 text-right">Bonus</th>
               <th className="pb-2 px-3 text-right">Thành tiền</th>
-              <th className="pb-2 pl-3"></th>
+              <th className="pb-2 pl-3 text-right">Hành động</th>
             </tr>
           </thead>
           <tbody>
@@ -257,22 +323,22 @@ function ClientInvoiceEditor({ invoice, onDone, onPrint }) {
           <button
             type="button"
             onClick={handleTogglePaid}
-            className="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-200 hover:bg-gray-50 rounded-lg mr-auto"
+            className="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-200 hover:bg-gray-50 rounded-lg mr-auto cursor-pointer"
           >
             {invoice.paid ? 'Đánh dấu Chưa thanh toán' : 'Đánh dấu Đã thanh toán'}
           </button>
         )}
         <button
           type="button"
-          onClick={onDone}
-          className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-lg"
+          onClick={handleBack}
+          className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-lg cursor-pointer"
         >
           Hủy
         </button>
         <button
           type="button"
           onClick={handleSave}
-          className="px-4 py-2 text-sm font-medium text-white bg-gray-900 hover:bg-gray-800 rounded-lg"
+          className="px-4 py-2 text-sm font-medium text-white bg-gray-900 hover:bg-gray-800 rounded-lg cursor-pointer"
         >
           {isCreateMode ? 'Lưu hóa đơn' : 'Lưu thay đổi'}
         </button>

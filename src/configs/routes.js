@@ -1,7 +1,7 @@
 const routes = {
     clientInvoices: 'client-invoices',
-    clientInvoiceDetail:'client-invoices/:id',
-    clientInvoiceEditor:'client-invoice/:id/edit',
+    createClientInvoice:'client-invoices/create',
+    editClientInvoice:'client-invoices/:id/edit',
     freelancerInvoices: 'freelancer-invoices', 
     freelancerInvoiceDetail:'freelancer-invoices/:id',
     pricing: 'pricing', 

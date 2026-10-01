@@ -45,7 +45,46 @@ const DEFAULT_FROM = {
 };
 
 // Chia nhỏ initialModels thành vài hóa đơn giả để có dữ liệu phân trang
-export const initialInvoices = [
+export const initialClientInvoices = [
+  {
+    id: 'inv-1001',
+    invoiceNumber: 1001,
+    createdAt: '2025-06-02',
+    from: DEFAULT_FROM,
+    to: { name: 'Công ty PC Gear', email: 'contact@pcgear.vn', address: 'Cầu Giấy, Hà Nội' },
+    models: initialModels.slice(0, 3),
+    paid: true,
+  },
+  {
+    id: 'inv-1002',
+    invoiceNumber: 1002,
+    createdAt: '2025-06-10',
+    from: DEFAULT_FROM,
+    to: { name: 'Việt Tech Store', email: 'sales@viettech.vn', address: 'Q1, TP.HCM' },
+    models: initialModels.slice(3, 6),
+    paid: false,
+  },
+  {
+    id: 'inv-1003',
+    invoiceNumber: 1003,
+    createdAt: '2025-06-18',
+    from: DEFAULT_FROM,
+    to: { name: 'Anh Khoa Computer', email: 'khoa@akcomputer.vn', address: 'Đà Nẵng' },
+    models: initialModels.slice(6, 8),
+    paid: false,
+  },
+  // thêm vài hóa đơn giả nữa để test phân trang
+  ...Array.from({ length: 9 }).map((_, i) => ({
+    id: `inv-${2001 + i}`,
+    invoiceNumber: 2001 + i,
+    createdAt: `2025-07-${String(i + 1).padStart(2, '0')}`,
+    from: DEFAULT_FROM,
+    to: { name: `Khách hàng ${i + 1}`, email: `khach${i + 1}@example.com`, address: 'Hà Nội' },
+    models: initialModels.slice(0, (i % 3) + 1),
+    paid: i % 2 === 0,
+  })),
+];
+export const initialFreelancerInvoices = [
   {
     id: 'inv-1001',
     invoiceNumber: 1001,

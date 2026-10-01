@@ -1,218 +1,248 @@
-import { useState, useMemo } from "react";
-import { useSelector, useDispatch } from "react-redux";
-import { 
-  addToFreelancerInvoice, 
-  removeFromFreelancerInvoice,
-} from "../../redux/actions/freelancerInvoiceActions.js";
-import { updateModelPaid } from "../../redux/actions/modelActions.js";
-import { DeadlineBadge, PaidBadge } from "../../components/Badge.jsx";
-import { priceFor, bonusFor, fmtVND } from "../../utils/pricing.js";
-import { printInvoice } from "../../utils/printInvoice.js";
+// pages/InvoiceListPage.jsx
+import { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useSelector } from 'react-redux';
+import { priceFor, bonusFor, fmtUSD } from '../../utils/pricing.js';
+import { printInvoice, showInvoicePdf } from '../../utils/printInvoice.js';
+import { notifySuccess, notifyWarning } from '../../utils/toast.js';
+import {  Pencil, Printer, Trash, X, Search } from 'lucide-react'; 
+import { useConfirmDialog } from '../../hooks/useConfirmDialog.js';
+const PAGE_SIZE = 5;
 
-function Index({ showToast }) {
-  const dispatch = useDispatch();
-  
-  // Lấy dữ liệu từ Redux store
-  const models = useSelector((state) => state.models);
-  const {ids} = useSelector((state) => state.freelancerInvoice);
-  const clientPrices = useSelector((state) => state.clientPrices);
-  const freelancerPrices = useSelector((state) => state.freelancerPrices);
-  const [selectedId, setSelectedId] = useState("");
-  console.log(ids)
-  const rows = useMemo(
-    () => ids.map((id) => models.find((m) => m.id === id)).filter(Boolean),
-    [ids, models]
-  );
-
-  const availableModels = useMemo(
-    () => models.filter((m) => !ids.includes(m.id)),
-    [models, ids]
-  );
-
-  const total = rows.reduce(
+function InvoiceTotal({ invoice, clientPrices, freelancerPrices }) {
+  const total = invoice.models.reduce(
     (sum, m) =>
       sum +
-      priceFor(m, "freelancer", clientPrices, freelancerPrices) +
-      bonusFor(m, "freelancer", clientPrices, freelancerPrices),
+      priceFor(m, 'client', clientPrices, freelancerPrices) +
+      bonusFor(m, 'client', clientPrices, freelancerPrices),
     0
   );
+  return <span>{fmtUSD(total)}</span>;
+}
 
-  function handleAddRow() {
-    if (!selectedId) return;
-    dispatch(addToFreelancerInvoice(Number(selectedId)));
-    setSelectedId("");
-  }
+function ClientInvoices() {
+  const navigate = useNavigate();
+  const invoices = useSelector((s) => s.invoices.list);
+  const clientPrices = useSelector((s) => s.clientPrices);
+  const freelancerPrices = useSelector((s) => s.freelancerPrices);
+  const { confirm } = useConfirmDialog();
+  const [page, setPage] = useState(1);
+  const [searchTerm, setSearchTerm] = useState(''); // 👈 state cho input tìm kiếm
 
-  function handleMarkPaid() {
-    if (freelancerInvoiceIds.length === 0) {
-      showToast("Chưa có dòng nào trong hóa đơn");
+  // 👈 Lọc invoices theo searchTerm (mã HĐ + tên khách hàng)
+  const filteredInvoices = useMemo(() => {
+    const keyword = searchTerm.trim().toLowerCase();
+    if (!keyword) return invoices;
+
+    return invoices.filter((inv) => {
+      const invoiceNumberStr = String(inv.invoiceNumber ?? '').toLowerCase();
+      const customerName = (inv.to?.name ?? '').toLowerCase();
+      return (
+        invoiceNumberStr.includes(keyword) ||
+        customerName.includes(keyword)
+      );
+    });
+  }, [invoices, searchTerm]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredInvoices.length / PAGE_SIZE));
+
+  // 👈 Dùng filteredInvoices thay vì invoices
+  const pageItems = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE;
+    return filteredInvoices.slice(start, start + PAGE_SIZE);
+  }, [filteredInvoices, page]);
+
+  // 👈 Reset về trang 1 mỗi khi searchTerm thay đổi
+  const handleSearchChange = (e) => {
+    setSearchTerm(e.target.value);
+    setPage(1);
+  };
+
+  const handleClearSearch = () => {
+    setSearchTerm('');
+    setPage(1);
+  };
+
+  const handleDelete = async (invoiceId) => {
+    const ok = await confirm({
+      title: 'Bạn có chắc chắn muốn xóa ?',
+      text: 'Bài viết sẽ bị xóa vĩnh viễn và không thể khôi phục',
+      type: 'danger',
+      confirmText: 'Xóa',
+    });
+    if (!ok) return;
+    const remaining = invoices.length - 1;
+    const newTotalPages = Math.max(1, Math.ceil(remaining / PAGE_SIZE));
+    if (page > newTotalPages) setPage(newTotalPages);
+    notifySuccess('Đã xóa hóa đơn');
+  };
+
+  const handlePrint = (invoice) => {
+    if (invoice.models.length === 0) {
+      notifyWarning('Hóa đơn chưa có model nào để in');
       return;
     }
-    dispatch(updateModelPaid(freelancerInvoiceIds, "freelancer"));
-    showToast("Đã đánh dấu hóa đơn freelancer: Đã thanh toán");
-  }
-
-  function handleExportPdf() {
-    if (rows.length === 0) {
-      showToast("Chưa có dòng nào để xuất");
-      return;
-    }
-    const printRows = rows.map((m) => {
-      const price = priceFor(m, "freelancer", clientPrices, freelancerPrices);
-      const bonus = bonusFor(m, "freelancer", clientPrices, freelancerPrices);
-      return {
-        name: m.name,
-        type: m.type,
-        status: m.status,
-        milestone: m.milestone,
-        deadline: m.deadline,
-        priceLabel: fmtVND(price),
-        bonusLabel: bonus ? fmtVND(bonus) : "—",
-        lineTotalLabel: fmtVND(price + bonus),
-      };
-    });
-    printInvoice({
-      audienceLabel: "Hóa đơn freelancer",
-      rows: printRows,
-      totalLabel: fmtVND(total),
-      invoiceNumber: Math.floor(1000 + Math.random() * 9000),
-    });
-  }
+    const rows = invoice.models.map((m, index) => ({
+      num: index + 1,
+      name: m.name,
+      type: m.type,
+      variant: m.status,
+      milestone: m.milestone,
+      deadline: m.deadline,
+      price: priceFor(m, 'client', clientPrices, freelancerPrices),
+      bonus: bonusFor(m, 'client', clientPrices, freelancerPrices),
+      note: '',
+    }));
+    const total = rows.reduce((sum, r) => sum + r.price + r.bonus, 0);
+    const doc = printInvoice({ invoice, rows, total });
+    showInvoicePdf(doc);
+  };
 
   return (
-    <section className="px-8 py-8 max-w-6xl">
-      {/* Header trang */}
+    <section className="px-8 py-8">
       <div className="flex items-end justify-between gap-4 pb-5 mb-6 border-b border-gray-100">
         <div>
-          <h1 className="text-xl font-semibold text-gray-900 tracking-tight">
-            Hóa đơn freelancer
-          </h1>
-          <p className="text-sm text-gray-400 mt-1">
-            Đơn vị: VND — cùng điều kiện Bonus như hóa đơn khách hàng
-          </p>
+          <h1 className="text-xl font-semibold text-gray-900 tracking-tight">Hóa đơn khách hàng</h1>
+          <p className="text-sm text-gray-400 mt-1">Danh sách hóa đơn đã tạo</p>
         </div>
-        <div className="flex items-center gap-2.5 shrink-0">
+
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <Search
+              width={16}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+            />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={handleSearchChange}
+              placeholder="Tìm theo mã HĐ hoặc tên khách hàng..."
+              className="w-[300px] rounded-full border border-neutral-200 bg-neutral-50 py-2.5 pl-10 pr-4 text-sm text-neutral-700 outline-none transition-all duration-200 placeholder:text-neutral-400 focus:border-neutral-300 focus:bg-white focus:ring-4 focus:ring-neutral-100"
+            />
+            
+            {searchTerm && (
+              <button
+                type="button"
+                onClick={handleClearSearch}
+                title="Xóa tìm kiếm"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 cursor-pointer p-1"
+              >
+                <X width={14} />
+              </button>
+            )}
+          </div>
+
           <button
             type="button"
-            onClick={handleExportPdf}
-            className="rounded-full border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-          >
-            Xuất PDF
-          </button>
-          <button
-            type="button"
-            onClick={handleMarkPaid}
+            onClick={() => navigate('/client-invoices/create')}
             className="rounded-full bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 transition-colors"
           >
-            Đánh dấu đã thanh toán
+            + Tạo hóa đơn
           </button>
         </div>
       </div>
 
-      {/* Bảng hóa đơn */}
       <div className="rounded-2xl border border-gray-100 bg-white shadow-sm p-5">
-        <table className="w-full border-collapse">
+        <table className="w-full border-collapse text-sm">
           <thead>
             <tr className="text-left text-xs font-medium text-gray-400">
-              <th className="pb-3 pr-3">Model</th>
-              <th className="pb-3 px-3">Loại</th>
-              <th className="pb-3 px-3">Trạng thái</th>
-              <th className="pb-3 px-3 text-right">Milestone</th>
-              <th className="pb-3 px-3">Deadline</th>
-              <th className="pb-3 px-3">Staff</th>
-              <th className="pb-3 px-3 text-right">Đơn giá</th>
-              <th className="pb-3 px-3 text-right">Bonus</th>
-              <th className="pb-3 px-3 text-right">Thành tiền</th>
-              <th className="pb-3 pl-3"></th>
+              <th className="pb-3 pr-3">Số HĐ</th>
+              <th className="pb-3 px-3">Ngày tạo</th>
+              <th className="pb-3 px-3">Khách hàng</th>
+              <th className="pb-3 px-3 text-center">Số model</th>
+              <th className="pb-3 px-3 text-center">Tổng tiền</th>
+              <th className="pb-3 px-3 text-center">Trạng thái</th>
+              <th className="pb-3 pl-3 text-center">Hành động</th>
             </tr>
           </thead>
-          <tbody className="text-sm">
-            {rows.length === 0 && (
+          <tbody>
+            {pageItems.length === 0 && (
               <tr>
-                <td colSpan={10} className="py-10 text-center text-sm text-gray-400">
-                  Chưa có dòng nào — thêm model ở bên dưới.
+                <td colSpan={7} className="py-10 text-center text-gray-400">
+                  {searchTerm
+                    ? `Không tìm thấy hóa đơn nào khớp với "${searchTerm}".`
+                    : 'Chưa có hóa đơn nào.'}
                 </td>
               </tr>
             )}
-            {rows.map((m) => {
-              const price = priceFor(m, "freelancer", clientPrices, freelancerPrices);
-              const bonus = bonusFor(m, "freelancer", clientPrices, freelancerPrices);
-              return (
-                <tr key={m.id} className="border-t border-gray-100">
-                  <td className="py-3 pr-3">
-                    <div className="flex items-center gap-2 font-medium text-gray-900">
-                      {m.name}
-                      {m.freelancerPaid && <PaidBadge paid paidLabel="Paid" />}
-                    </div>
-                  </td>
-                  <td className="py-3 px-3 text-gray-500">{m.type}</td>
-                  <td className="py-3 px-3 text-gray-500">{m.status}</td>
-                  <td className="py-3 px-3 text-right font-mono text-gray-700 tabular-nums">
-                    {m.milestone}
-                  </td>
-                  <td className="py-3 px-3">
-                    <DeadlineBadge status={m.deadline} />
-                  </td>
-                  <td className="py-3 px-3 text-gray-500">{m.staff}</td>
-                  <td className="py-3 px-3 text-right font-mono text-gray-700 tabular-nums">
-                    {fmtVND(price)}
-                  </td>
-                  <td className="py-3 px-3 text-right font-mono text-gray-700 tabular-nums">
-                    {bonus ? fmtVND(bonus) : "—"}
-                  </td>
-                  <td className="py-3 px-3 text-right font-mono font-semibold text-gray-900 tabular-nums">
-                    {fmtVND(price + bonus)}
-                  </td>
-                  <td className="py-3 pl-3 text-right">
-                    <button
-                      type="button"
-                      onClick={() => dispatch(removeFromFreelancerInvoice(m.id))}
-                      className="text-xs text-gray-400 hover:text-rose-500 transition-colors"
-                    >
-                      Xóa
-                    </button>
-                  </td>
-                </tr>
-              );
-            })}
+            {pageItems.map((inv) => (
+              <tr key={inv.id} className="border-t border-gray-100">
+                <td className="py-3 pr-3 font-mono">#{inv.invoiceNumber}</td>
+                <td className="py-3 px-3 text-gray-500">{inv.createdAt}</td>
+                <td className="py-3 px-3">
+                  <div className="font-medium text-gray-900">{inv.to.name}</div>
+                  <div className="text-xs text-gray-400">{inv.to.email}</div>
+                </td>
+                <td className="py-3 px-3 font-mono text-center">{inv.models.length}</td>
+                <td className="py-3 px-3 font-mono font-semibold text-center">
+                  <InvoiceTotal invoice={inv} clientPrices={clientPrices} freelancerPrices={freelancerPrices} />
+                </td>
+                <td className="py-3 px-3 text-center">
+                  <span
+                    className={`text-xs font-medium px-2 py-1 rounded-full ${
+                      inv.paid ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'
+                    }`}
+                  >
+                    {inv.paid ? 'Đã thanh toán' : 'Chưa thanh toán'}
+                  </span>
+                </td>
+                <td className="py-3 pl-3 whitespace-nowrap text-center">
+                  <button
+                    type="button"
+                    title="Chỉnh sửa hóa đơn"
+                    onClick={() => navigate(`/client-invoices/${inv.id}/edit`)}
+                    className="text-gray-600 hover:text-gray-900 mr-3 cursor-pointer"
+                  >
+                    <Pencil width={15} />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handlePrint(inv)}
+                    title="In hóa đơn"
+                    className="text-gray-600 hover:text-gray-900 cursor-pointer mr-3"
+                  >
+                    <Printer width={15} />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(inv.id)}
+                    title="Xóa hóa đơn"
+                    className="text-rose-500 hover:text-rose-700 cursor-pointer"
+                  >
+                    <Trash width={15} />
+                  </button>
+                </td>
+              </tr>
+            ))}
           </tbody>
-          <tfoot>
-            <tr className="border-t-2 border-gray-900">
-              <td colSpan={8} className="pt-4 font-semibold text-gray-900">
-                Tổng cộng
-              </td>
-              <td className="pt-4 text-right font-mono font-semibold text-gray-900 tabular-nums">
-                {fmtVND(total)}
-              </td>
-              <td></td>
-            </tr>
-          </tfoot>
         </table>
 
-        {/* Thanh thêm dòng */}
-        <div className="flex items-center gap-2.5 mt-4 pt-4 border-t border-gray-100">
-          <select
-            value={selectedId}
-            onChange={(e) => setSelectedId(e.target.value)}
-            className="min-w-[280px] rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-900/10"
-          >
-            <option value="">— Chọn model —</option>
-            {availableModels.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.name} — {m.type} / {m.status}
-              </option>
-            ))}
-          </select>
+        <div className="flex items-center justify-end gap-2 mt-4 pt-4 border-t border-gray-100">
           <button
             type="button"
-            onClick={handleAddRow}
-            className="rounded-lg border border-gray-200 px-3.5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+            disabled={page <= 1}
+            onClick={() => setPage((p) => p - 1)}
+            className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50"
           >
-            + Thêm dòng
+            ‹ Trước
+          </button>
+          <span className="text-sm text-gray-500">
+            Trang {page} / {totalPages}
+          </span>
+          <button
+            type="button"
+            disabled={page >= totalPages}
+            onClick={() => setPage((p) => p + 1)}
+            className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50"
+          >
+            Sau ›
           </button>
         </div>
       </div>
     </section>
   );
 }
-export default Index;
+
+export default ClientInvoices;

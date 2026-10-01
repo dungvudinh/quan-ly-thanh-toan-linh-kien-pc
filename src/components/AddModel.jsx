@@ -1,10 +1,13 @@
 // components/Invoice/AddModel.jsx
+import { Plus } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
+import { notifySuccess, notifyWarning } from '../utils/toast.js';
+import { initialModels, initialInvoices } from '../data/mockData.js';
 
-function AddModel({ isOpen, onClose, onAddModel, showToast }) {
+function AddModel({ isOpen, onClose, onAddModel }) {
   const clientPrices = useSelector((state) => state.clientPrices);
-
+  console.log(clientPrices)
   const [formData, setFormData] = useState({
     name: '',
     type: '',
@@ -41,27 +44,107 @@ function AddModel({ isOpen, onClose, onAddModel, showToast }) {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
+  /**
+   * Tìm model trùng trong initialModels.
+   * Trả về model trùng (kèm id) hoặc null nếu không có.
+   */
+  const findDuplicateModel = (model) => {
+    const normalizedName = model.name.trim().toLowerCase();
+    return (
+      initialModels.find(
+        (m) => m.name?.trim().toLowerCase() === normalizedName
+      ) ?? null
+    );
+  };
+
+  /**
+   * Tìm hóa đơn chứa model (theo id).
+   * Trả về invoice hoặc null.
+   */
+  const findInvoiceContainingModel = (modelId) => {
+    return (
+      initialInvoices.find((inv) =>
+        inv.models?.some((m) => m.id === modelId)
+      ) ?? null
+    );
+  };
+
+  /**
+   * Tạo object model từ form + validate.
+   * Trả về null nếu validate thất bại (đã toast warning).
+   */
+  const buildModel = () => {
+    if (!formData.name.trim()) {
+      notifyWarning('Vui lòng nhập tên Model!');
+      return null;
+    }
+    if (!formData.type) {
+      notifyWarning('Vui lòng chọn loại linh kiện!');
+      return null;
+    }
+
+    try {
+      return {
+        id: crypto.randomUUID(),
+        name: formData.name.trim(),
+        type: formData.type,
+        milestone: Number(formData.milestone) || 0,
+        status: formData.status,
+        deadline: formData.deadline,
+        staff: formData.staff.trim() || 'Chưa phân công',
+        // Mặc định chưa thanh toán
+        clientPaid: false,
+        freelancerPaid: false,
+      };
+    } catch (err) {
+      notifyWarning('Có lỗi khi tạo model, vui lòng thử lại!');
+      console.error('Lỗi build model:', err);
+      return null;
+    }
+  };
+
+  /** Nút "Thêm Model" */
+  const handleAddModel = (e) => {
     e.preventDefault();
 
-    if (!formData.name.trim() || !formData.type) {
-      showToast?.('Vui lòng điền đầy đủ thông tin!');
+    const newModel = buildModel();
+    if (!newModel) return;
+
+    // 1. Kiểm tra model đã tồn tại trong initialModels chưa
+    const duplicateModel = findDuplicateModel(newModel);
+
+    if (duplicateModel) {
+      // 2. Tìm hóa đơn chứa model trùng
+      const invoice = findInvoiceContainingModel(duplicateModel.id);
+
+      if (invoice) {
+        notifyWarning(
+          `Model "${newModel.name}" đã tồn tại trong hóa đơn #${invoice.invoiceNumber}!`
+        );
+      } else {
+        // Trường hợp model có trong initialModels nhưng chưa gán vào hóa đơn nào
+        notifyWarning(
+          `Model "${newModel.name}" đã tồn tại trong hệ thống!`
+        );
+      }
       return;
     }
 
-    const newModel = {
-      id: crypto.randomUUID(),
-      name: formData.name.trim(),
-      type: formData.type,
-      milestone: Number(formData.milestone) || 0,
-      status: formData.status,
-      deadline: formData.deadline,
-      staff: formData.staff.trim() || 'Chưa phân công',
-    };
+    // 3. Thêm model vào hóa đơn (draft)
+    try {
+      onAddModel?.(newModel);
+      notifySuccess(`Đã thêm model "${newModel.name}" vào hóa đơn!`);
+      onClose();
+    } catch (err) {
+      notifyWarning('Thêm model thất bại, vui lòng thử lại!');
+      console.error('Lỗi khi thêm model:', err);
+    }
+  };
 
-    onAddModel?.(newModel); // <-- cha quyết định lưu vào đâu
-    showToast?.('Đã thêm model vào hóa đơn!');
-    onClose();
+  // Enter trong form = click "Thêm Model"
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    handleAddModel(e);
   };
 
   if (!isOpen) return null;
@@ -192,14 +275,15 @@ function AddModel({ isOpen, onClose, onAddModel, showToast }) {
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+              className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-lg transition-colors cursor-pointer"
             >
               Hủy
             </button>
             <button
-              onClick={handleSubmit}
-              className="px-4 py-2 text-sm font-medium text-white bg-gray-900 hover:bg-gray-800 rounded-lg transition-colors"
+              type="submit"
+              className="px-3 py-2 text-sm font-medium text-white bg-gray-900 hover:bg-gray-800 rounded-lg transition-colors flex items-center cursor-pointer"
             >
+              <Plus width={15} className='mr-1'/>
               Thêm Model
             </button>
           </div>
