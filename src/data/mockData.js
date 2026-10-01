@@ -3,24 +3,24 @@
 // Số liệu bảng giá khách hàng là placeholder (bảng gốc bị lỗi định dạng cột khi
 // trích xuất từ PDF) — chỉnh lại trong tab "Bảng giá" hoặc trực tiếp ở đây.
 export const initialClientPrices = {
-  VGA: { new: 105, similar1: 47, newModular: 20, bonus: 25, modularSimilar: 60 },
-  Mainboard: { new: 89, similar1: 47, newModular: 20, bonus: 15, modularSimilar: 60 },
-  Case: { new: 131, similar1: 47, newModular: 20, bonus: 15, modularSimilar: 60 },
-  Fan: { new: 58, similar1: 16, newModular: 12, bonus: 0, modularSimilar: 0 },
-  "CPU Cooler": { new: 63, similar1: 26, newModular: 15, bonus: 0, modularSimilar: 40 },
-  AIO: { new: 84, similar1: 21, newModular: 15, bonus: 0, modularSimilar: 0 },
-  PSU: { new: 79, similar1: 26, newModular: 15, bonus: 0, modularSimilar: 0 },
+  VGA: { new: 105, similar1: 47, similar2: 20, bonus: 25, modular: 60 },
+  Mainboard: { new: 89, similar1: 47, similar2: 20, bonus: 15, modular: 60 },
+  Case: { new: 131, similar1: 47, similar2: 20, bonus: 15, modular: 60 },
+  Fan: { new: 58, similar1: 16, similar2: 12, bonus: 0, modular: 0 },
+  "CPU Cooler": { new: 63, similar1: 26, similar2: 15, bonus: 0, modular: 40 },
+  AIO: { new: 84, similar1: 21, similar2: 15, bonus: 0, modular: 0 },
+  PSU: { new: 79, similar1: 26, similar2: 15, bonus: 0, modular: 0 },
 };
 
 // Bảng giá freelancer (Lạc Việt Studio) lấy đúng số liệu trong file gốc.
 export const initialFreelancerPrices = {
-  VGA: { price: 1300000, bonus: 300000, similar1: 600000, similar2: 247000 },
-  Mainboard: { price: 1055000, bonus: 255000, similar1: 600000, similar2: 247000 },
-  Case: { price: 1300000, bonus: 300000, similar1: 600000, similar2: 247000 },
-  Fan: { price: 494000, bonus: 0, similar1: 0, similar2: 247000 },
-  "CPU Cooler": { price: 500000, bonus: 0, similar1: 0, similar2: 247000 },
-  AIO: { price: 900000, bonus: 0, similar1: 0, similar2: 247000 },
-  PSU: { price: 550000, bonus: 0, similar1: 0, similar2: 247000 },
+  VGA: { new: 1300000, bonus: 300000, similar1: 600000, similar2: 247000,modular:0 },
+  Mainboard: { new: 1055000, bonus: 255000, similar1: 600000, similar2: 247000,modular:0 },
+  Case: { new: 1300000, bonus: 300000, similar1: 600000, similar2: 247000,modular:0 },
+  Fan: { new: 494000, bonus: 0, similar1: 0, similar2: 247000,modular:0 },
+  "CPU Cooler": { new: 500000, bonus: 0, similar1: 0, similar2: 247000,modular:0 },
+  AIO: { new: 900000, bonus: 0, similar1: 0, similar2: 247000, modular:0 },
+  PSU: { new: 550000, bonus: 0, similar1: 0, similar2: 247000, modular:0 },
 };
 
 // Loại linh kiện được cộng bonus khi: trạng thái New + Deadline OK.
@@ -35,4 +35,52 @@ export const initialModels = [
   { id: 6, name: "Noctua NF-A12 Fan Kit", type: "Fan", milestone: 35, status: "New", deadline: "OK", staff: "Vinh", clientPaid: false, freelancerPaid: false },
   { id: 7, name: "be quiet! Dark Rock Pro 5", type: "CPU Cooler", milestone: 36, status: "New", deadline: "OK", staff: "Vinh", clientPaid: false, freelancerPaid: false },
   { id: 8, name: "Corsair RM850x PSU", type: "PSU", milestone: 37, status: "Similar1", deadline: "OK", staff: "Vinh", clientPaid: false, freelancerPaid: false },
+];
+
+
+const DEFAULT_FROM = {
+  name: 'Lạc Việt Studio',
+  email: 'lacvietstu@gmail.com',
+  address: 'Lk16.29 Hinode Royal Park city, Ha Noi, Viet Nam',
+};
+
+// Chia nhỏ initialModels thành vài hóa đơn giả để có dữ liệu phân trang
+export const initialInvoices = [
+  {
+    id: 'inv-1001',
+    invoiceNumber: 1001,
+    createdAt: '2025-06-02',
+    from: DEFAULT_FROM,
+    to: { name: 'Công ty PC Gear', email: 'contact@pcgear.vn', address: 'Cầu Giấy, Hà Nội' },
+    models: initialModels.slice(0, 3),
+    paid: true,
+  },
+  {
+    id: 'inv-1002',
+    invoiceNumber: 1002,
+    createdAt: '2025-06-10',
+    from: DEFAULT_FROM,
+    to: { name: 'Việt Tech Store', email: 'sales@viettech.vn', address: 'Q1, TP.HCM' },
+    models: initialModels.slice(3, 6),
+    paid: false,
+  },
+  {
+    id: 'inv-1003',
+    invoiceNumber: 1003,
+    createdAt: '2025-06-18',
+    from: DEFAULT_FROM,
+    to: { name: 'Anh Khoa Computer', email: 'khoa@akcomputer.vn', address: 'Đà Nẵng' },
+    models: initialModels.slice(6, 8),
+    paid: false,
+  },
+  // thêm vài hóa đơn giả nữa để test phân trang
+  ...Array.from({ length: 9 }).map((_, i) => ({
+    id: `inv-${2001 + i}`,
+    invoiceNumber: 2001 + i,
+    createdAt: `2025-07-${String(i + 1).padStart(2, '0')}`,
+    from: DEFAULT_FROM,
+    to: { name: `Khách hàng ${i + 1}`, email: `khach${i + 1}@example.com`, address: 'Hà Nội' },
+    models: initialModels.slice(0, (i % 3) + 1),
+    paid: i % 2 === 0,
+  })),
 ];

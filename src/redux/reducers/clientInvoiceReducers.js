@@ -5,6 +5,7 @@ const initialState = {
 export default function clientInvoiceReducer(state = initialState, action) {
   switch (action.type) {
     case ADD_TO_CLIENT_INVOICE:
+      console.log(action.payload)
       return state.ids.includes(action.payload) ? state : { ...state, ids: [...state.ids, action.payload] };
     
     case REMOVE_FROM_CLIENT_INVOICE:

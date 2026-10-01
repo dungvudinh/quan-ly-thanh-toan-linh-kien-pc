@@ -2,8 +2,8 @@ import Header from '../components/Header';
 import Sidebar from '../components/Sidebar';
 import { Receipt, Briefcase, Tag, Search } from "lucide-react";
 const NAV_ITEMS = [
-  { key: "client-invoice",label: "Hóa đơn khách hàng", icon: Receipt },
-  { key: "freelancer-invoice", label: "Hóa đơn freelancer", icon: Briefcase },
+  { key: "client-invoices",label: "Hóa đơn khách hàng", icon: Receipt },
+  { key: "freelancer-invoices", label: "Hóa đơn freelancer", icon: Briefcase },
   { key: "pricing" ,label: "Bảng giá", icon: Tag },
   { key: "lookup", label: "Tra cứu model", icon: Search },
 ];

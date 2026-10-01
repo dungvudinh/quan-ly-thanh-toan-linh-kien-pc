@@ -1,6 +1,9 @@
 const routes = {
-    clientInvoice: 'client-invoice',
-    freelancerInvoice: 'freelancer-invoice', 
+    clientInvoices: 'client-invoices',
+    clientInvoiceDetail:'client-invoices/:id',
+    clientInvoiceEditor:'client-invoice/:id/edit',
+    freelancerInvoices: 'freelancer-invoices', 
+    freelancerInvoiceDetail:'freelancer-invoices/:id',
     pricing: 'pricing', 
     lookup:'lookup',
   };

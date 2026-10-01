@@ -1,5 +1,5 @@
-import { SET_MODELS, UPDATE_MODEL_PAID } from "../actionTypes";
-import { initialModels,initialClientPrices,initialFreelancerPrices } from "../../data/mockData";
+import { ADD_MODEL, SET_MODELS, UPDATE_MODEL_PAID } from "../actionTypes";
+import { initialModels } from "../../data/mockData";
 export default function modelsReducer(state = initialModels, action) {
   switch (action.type) {
     case SET_MODELS:
@@ -15,7 +15,11 @@ export default function modelsReducer(state = initialModels, action) {
           : model
       );
     }
-    
+    case ADD_MODEL:{
+      const newModel = action.payload;
+      const maxId = state.reduce((max, m) => Math.max(max, m.id), 0);
+      return [...state, { ...newModel, id: maxId + 1 }];
+    }
     default:
       return state;
   }

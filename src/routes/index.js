@@ -1,16 +1,25 @@
 import routes from '../configs/routes';
-import ClientInvoice from '../pages/ClientInvoice';
-import FreelancerInvoice from '../pages/FreelancerInvoice';
+import ClientInvoices from '../pages/ClientInvoices';
+import ClientInvoiceEditor from '../pages/ClientInvoices/editor.jsx'
+import FreelancerInvoices from '../pages/FreelancerInvoices';
 import Pricing from '../pages/Pricing';
 import Lookup from '../pages/Lookup';
 const publicRoutes = [
   {
-    path: routes.clientInvoice,
-    component: ClientInvoice,
+    path: routes.clientInvoices,
+    component: ClientInvoices,
   },
   {
-    path: routes.freelancerInvoice,
-    component: FreelancerInvoice,
+    path:routes.clientInvoiceDetail, 
+    component:ClientInvoiceEditor
+  }, 
+  {
+    path:routes.clientInvoiceEditor, 
+    component:ClientInvoiceEditor
+  },
+  {
+    path: routes.freelancerInvoices,
+    component: FreelancerInvoices,
   },
   {
     path:routes.pricing, 

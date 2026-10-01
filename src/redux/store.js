@@ -6,6 +6,7 @@ import clientInvoiceReducer from "./reducers/clientInvoiceReducers";
 import clientPricesReducer from "./reducers/clientPriceReducers";
 import freelancerPricesReducer from "./reducers/freelancerPriceReducers";
 import freelancerInvoiceReducer from "./reducers/freelancerInvoiceReducers";
+import invoiceReducer from "./reducers/invoiceReducers";
 const rootReducer = combineReducers({
     theme:themeReducer,
     tab:tabReducer,
@@ -13,7 +14,8 @@ const rootReducer = combineReducers({
     clientInvoice:clientInvoiceReducer,
     clientPrices:clientPricesReducer,
     freelancerPrices:freelancerPricesReducer,
-    freelancerInvoice:freelancerInvoiceReducer
+    freelancerInvoice:freelancerInvoiceReducer,
+    invoices:invoiceReducer
 })
 const store = createStore(rootReducer);
 export default store;
