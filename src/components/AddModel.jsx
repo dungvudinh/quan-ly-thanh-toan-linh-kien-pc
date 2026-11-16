@@ -3,11 +3,11 @@ import { Plus } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { notifySuccess, notifyWarning } from '../utils/toast.js';
-import { initialModels, initialInvoices } from '../data/mockData.js';
 
-function AddModel({ isOpen, onClose, onAddModel }) {
+function AddModel({ isOpen, onClose, onAddModel, audience = 'client' }) {
   const clientPrices = useSelector((state) => state.clientPrices);
-  console.log(clientPrices)
+  const freelancerPrices = useSelector((state) => state.freelancerPrices);
+  const prices = audience === 'freelancer' ? freelancerPrices : clientPrices;
   const [formData, setFormData] = useState({
     name: '',
     type: '',
@@ -21,14 +21,14 @@ function AddModel({ isOpen, onClose, onAddModel }) {
     if (isOpen) {
       setFormData({
         name: '',
-        type: Object.keys(clientPrices)[0] || '',
+        type: Object.keys(prices)[0] || '',
         status: 'New',
         milestone: 0,
         deadline: 'OK',
         staff: '',
       });
     }
-  }, [isOpen, clientPrices]);
+  }, [isOpen, prices]);
 
   const statusOptions = [
     { title: 'New', key: 'new' },
@@ -37,7 +37,7 @@ function AddModel({ isOpen, onClose, onAddModel }) {
     { title: 'Modular', key: 'modular' },
   ];
 
-  const typeOptions = Object.keys(clientPrices);
+  const typeOptions = Object.keys(prices);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -45,13 +45,15 @@ function AddModel({ isOpen, onClose, onAddModel }) {
   };
 
   /**
-   * Tìm model trùng trong initialModels.
+   * Tìm model trùng trong dữ liệu đã tải từ API.
    * Trả về model trùng (kèm id) hoặc null nếu không có.
    */
+  const models = useSelector((state) => state.models);
+  const invoices = useSelector((state) => state.invoices.list);
   const findDuplicateModel = (model) => {
     const normalizedName = model.name.trim().toLowerCase();
     return (
-      initialModels.find(
+      models.find(
         (m) => m.name?.trim().toLowerCase() === normalizedName
       ) ?? null
     );
@@ -63,7 +65,7 @@ function AddModel({ isOpen, onClose, onAddModel }) {
    */
   const findInvoiceContainingModel = (modelId) => {
     return (
-      initialInvoices.find((inv) =>
+      invoices.find((inv) =>
         inv.models?.some((m) => m.id === modelId)
       ) ?? null
     );
@@ -104,13 +106,13 @@ function AddModel({ isOpen, onClose, onAddModel }) {
   };
 
   /** Nút "Thêm Model" */
-  const handleAddModel = (e) => {
+  const handleAddModel = async (e) => {
     e.preventDefault();
 
     const newModel = buildModel();
     if (!newModel) return;
 
-    // 1. Kiểm tra model đã tồn tại trong initialModels chưa
+    // 1. Kiểm tra model đã tồn tại trong hệ thống chưa
     const duplicateModel = findDuplicateModel(newModel);
 
     if (duplicateModel) {
@@ -122,7 +124,7 @@ function AddModel({ isOpen, onClose, onAddModel }) {
           `Model "${newModel.name}" đã tồn tại trong hóa đơn #${invoice.invoiceNumber}!`
         );
       } else {
-        // Trường hợp model có trong initialModels nhưng chưa gán vào hóa đơn nào
+        // Model đã có trong hệ thống nhưng chưa được đưa vào hóa đơn.
         notifyWarning(
           `Model "${newModel.name}" đã tồn tại trong hệ thống!`
         );
@@ -132,7 +134,7 @@ function AddModel({ isOpen, onClose, onAddModel }) {
 
     // 3. Thêm model vào hóa đơn (draft)
     try {
-      onAddModel?.(newModel);
+      await onAddModel?.(newModel);
       notifySuccess(`Đã thêm model "${newModel.name}" vào hóa đơn!`);
       onClose();
     } catch (err) {
@@ -254,17 +256,17 @@ function AddModel({ isOpen, onClose, onAddModel }) {
             <div className="space-y-1 text-gray-600">
               <p>Loại: <span className="font-mono">{formData.type}</span></p>
               <p>Trạng thái: <span className="font-mono">{formData.status}</span></p>
-              {formData.type && clientPrices[formData.type] && (
+              {formData.type && prices[formData.type] && (
                 <>
-                  <p>Giá {formData.status}: <span className="font-mono">${clientPrices[formData.type][formData.status.toLowerCase()] || 0}</span></p>
+                  <p>Giá {formData.status}: <span className="font-mono">{audience === 'client' ? '$' : ''}{prices[formData.type][formData.status.toLowerCase()] || 0}{audience === 'freelancer' ? ' ₫' : ''}</span></p>
                   {formData.deadline === 'OK' && (
-                    <p>Bonus: <span className="font-mono">${clientPrices[formData.type].bonus || 0}</span></p>
+                    <p>Bonus: <span className="font-mono">{audience === 'client' ? '$' : ''}{prices[formData.type].bonus || 0}{audience === 'freelancer' ? ' ₫' : ''}</span></p>
                   )}
                   <p className="font-semibold text-gray-900">
-                    Thành tiền: ${(
-                      (clientPrices[formData.type]?.[formData.status.toLowerCase()] || 0) +
-                      (formData.deadline === 'OK' ? (clientPrices[formData.type]?.bonus || 0) : 0)
-                    )}
+                    Thành tiền: {audience === 'client' ? '$' : ''}{(
+                      (prices[formData.type]?.[formData.status.toLowerCase()] || 0) +
+                      (formData.deadline === 'OK' ? (prices[formData.type]?.bonus || 0) : 0)
+                    )}{audience === 'freelancer' ? ' ₫' : ''}
                   </p>
                 </>
               )}

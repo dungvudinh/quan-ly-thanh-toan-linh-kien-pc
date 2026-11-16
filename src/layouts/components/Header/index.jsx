@@ -1,16 +1,14 @@
 import { Search, Bell } from "lucide-react";
-import { useSelector, useDispatch } from "react-redux";
+import { useSelector } from "react-redux";
 function Header({navItems}) {
-    console.log(navItems)
-    const dispatch = useDispatch();
     const {activeTab} = useSelector(state=>state.tab)
     const {theme} = useSelector(state=>state.theme)
     const title = navItems.find(item => item.key === activeTab)?.label.toUpperCase() || '';
     const userName = "Nguyen Van A";
     const avatarUrl = null; // Replace with the actual avatar URL if available
   return (
-    <header className="flex items-center justify-between gap-4  bg-neutral-100 px-8 py-5">
-      <h1 className="text-2xl font-semibold tracking-tight text-neutral-900">
+    <header className={`flex items-center justify-between gap-4 px-8 py-5 ${theme === 'dark' ? 'bg-neutral-800' : 'bg-neutral-100'}`}>
+      <h1 className={`text-2xl font-semibold tracking-tight ${theme === 'dark' ? 'text-white' : 'text-neutral-900'}`}>
         {title}
       </h1>
 
@@ -21,7 +19,7 @@ function Header({navItems}) {
           <input
             type="text"
             placeholder="Tìm kiếm..."
-            className="w-full rounded-full border border-neutral-200 bg-neutral-50 py-2.5 pl-10 pr-4 text-sm text-neutral-700 outline-none transition-all duration-200 placeholder:text-neutral-400 focus:border-neutral-300 focus:bg-white focus:ring-4 focus:ring-neutral-100"
+            className={`w-full rounded-full border py-2.5 pl-10 pr-4 text-sm outline-none transition-all duration-200 placeholder:text-neutral-400 focus:ring-4 ${theme === 'dark' ? 'border-neutral-600 bg-neutral-700 text-white focus:bg-neutral-700 focus:ring-neutral-600' : 'border-neutral-200 bg-neutral-50 text-neutral-700 focus:border-neutral-300 focus:bg-white focus:ring-neutral-100'}`}
           />
         </div>
 
@@ -32,7 +30,7 @@ function Header({navItems}) {
         </button> */}
 
         {/* Notification */}
-        <button className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-neutral-200 text-neutral-500 transition-colors duration-200 hover:bg-neutral-50">
+        <button className={`relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full border transition-colors duration-200 ${theme === 'dark' ? 'border-neutral-600 text-neutral-300 hover:bg-neutral-700' : 'border-neutral-200 text-neutral-500 hover:bg-neutral-50'}`}>
           <Bell className="h-[18px] w-[18px]" />
           <span className="absolute right-2.5 top-2.5 h-1.5 w-1.5 rounded-full bg-red-500" />
         </button>
@@ -43,7 +41,7 @@ function Header({navItems}) {
         </button> */}
 
         {/* Avatar */}
-        <button className="flex items-center gap-2 rounded-full py-1 pl-1 pr-1 transition-colors duration-200 hover:bg-neutral-100">
+        <button className={`flex items-center gap-2 rounded-full py-1 pl-1 pr-1 transition-colors duration-200 ${theme === 'dark' ? 'hover:bg-neutral-700' : 'hover:bg-neutral-100'}`}>
           {avatarUrl ? (
             <img
               src={avatarUrl}
@@ -51,7 +49,7 @@ function Header({navItems}) {
               className="h-9 w-9 rounded-full object-cover"
             />
           ) : (
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-neutral-200 text-xs font-semibold text-neutral-600">
+            <div className={`flex h-9 w-9 items-center justify-center rounded-full text-xs font-semibold ${theme === 'dark' ? 'bg-neutral-600 text-neutral-100' : 'bg-neutral-200 text-neutral-600'}`}>
               {userName.slice(0, 2).toUpperCase()}
             </div>
           )}

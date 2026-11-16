@@ -1,4 +1,4 @@
-import { BONUS_TYPES } from "../data/mockData.js";
+const BONUS_TYPES = ["Mainboard", "Case", "VGA"];
 
 export function fmtUSD(n) {
   return "$" + Number(n).toLocaleString("en-US");
@@ -18,13 +18,15 @@ export function priceFor(model, audience, clientPrices, freelancerPrices) {
     if (!p) return 0;
     if (model.status === "New") return p.new;
     if (model.status === "Similar1") return p.similar1;
-    return p.newModular;
+    if (model.status === "Similar2") return p.similar2;
+    return p.modular;
   }
   const p = freelancerPrices[model.type];
   if (!p) return 0;
-  if (model.status === "New") return p.price;
+  if (model.status === "New") return p.new;
   if (model.status === "Similar1") return p.similar1;
-  return p.similar2;
+  if (model.status === "Similar2") return p.similar2;
+  return p.modular;
 }
 
 /**

@@ -1,6 +1,5 @@
 import { ADD_MODEL, SET_MODELS, UPDATE_MODEL_PAID } from "../actionTypes";
-import { initialModels } from "../../data/mockData";
-export default function modelsReducer(state = initialModels, action) {
+export default function modelsReducer(state = [], action) {
   switch (action.type) {
     case SET_MODELS:
       return action.payload;

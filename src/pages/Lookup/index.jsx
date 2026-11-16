@@ -1,38 +1,46 @@
-import { useState, useMemo, useRef, useEffect } from "react";
-import { useSelector } from "react-redux";
+import { useState, useEffect } from "react";
 import { DeadlineBadge, PaidBadge } from "../../components/Badge.jsx";
+import { fmtUSD, fmtVND } from "../../utils/pricing.js";
+import { api } from "../../services/api.js";
 
 function Index() {
-  // Lấy dữ liệu từ Redux store
-  const models = useSelector((state) => state.models);
-  
   const [query, setQuery] = useState("");
-  const [showResults, setShowResults] = useState(false);
+  const [matches, setMatches] = useState([]);
   const [selected, setSelected] = useState(null);
-  const boxRef = useRef(null);
-
-  const matches = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return [];
-    return models.filter((m) => m.name.toLowerCase().includes(q));
-  }, [query, models]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    function handleClickOutside(e) {
-      if (boxRef.current && !boxRef.current.contains(e.target)) setShowResults(false);
-    }
-    document.addEventListener("click", handleClickOutside);
-    return () => document.removeEventListener("click", handleClickOutside);
-  }, []);
+    const q = query.trim().toLowerCase();
+    let active = true;
+    const timer = setTimeout(async () => {
+      setIsLoading(true);
+      try {
+        const queryString = q ? `q=${encodeURIComponent(q)}&` : '';
+        const firstPage = await api(`/models/search?${queryString}inInvoice=true&limit=100&page=1`);
+        const remainingPages = await Promise.all(
+          Array.from({ length: Math.max(0, firstPage.totalPages - 1) }, (_, index) =>
+            api(`/models/search?${queryString}inInvoice=true&limit=100&page=${index + 2}`)
+          )
+        );
+        if (active) setMatches([...firstPage.data, ...remainingPages.flatMap((page) => page.data)]);
+      } catch {
+        if (active) setMatches([]);
+      } finally {
+        if (active) setIsLoading(false);
+      }
+    }, q ? 250 : 0);
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [query]);
 
   function handleSelect(model) {
     setSelected(model);
-    setQuery(model.name);
-    setShowResults(false);
   }
 
   return (
-    <section className="px-8 py-8 max-w-4xl mx-auto">
+    <section className="mx-auto max-w-7xl px-8 py-8">
       {/* Header trang */}
       <div className="flex items-end justify-between gap-4 pb-5 mb-6 border-b border-gray-100">
         <div>
@@ -46,7 +54,7 @@ function Index() {
       </div>
 
       {/* Thanh tìm kiếm */}
-      <div className="relative mb-6" ref={boxRef}>
+      <div className="relative mb-6">
         <div className="relative">
           <input
             type="text"
@@ -55,7 +63,7 @@ function Index() {
             value={query}
             onChange={(e) => {
               setQuery(e.target.value);
-              setShowResults(true);
+              setSelected(null);
             }}
             className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900/10 transition-shadow"
           />
@@ -75,33 +83,36 @@ function Index() {
           </svg>
         </div>
 
-        {/* Kết quả tìm kiếm */}
-        {showResults && matches.length > 0 && (
-          <div className="absolute top-full mt-2 w-full rounded-xl border border-gray-100 bg-white shadow-lg max-h-64 overflow-y-auto z-10">
-            {matches.map((m) => (
-              <div
-                key={m.id}
-                onClick={() => handleSelect(m)}
-                className="flex items-center justify-between px-4 py-3 hover:bg-gray-50 cursor-pointer transition-colors border-b border-gray-50 last:border-0"
-              >
-                <span className="text-sm font-medium text-gray-900">{m.name}</span>
-                <span className="text-xs text-gray-400 whitespace-nowrap ml-4">
-                  {m.type} · Milestone {m.milestone}
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
       </div>
 
-      {/* Trạng thái chưa chọn model */}
-      {!selected && (
-        <div className="rounded-2xl border border-gray-100 bg-white shadow-sm p-12 text-center">
-          <p className="text-sm text-gray-400">
-            Chưa có model nào được chọn — hãy tìm ở ô phía trên.
-          </p>
+      <div className="mb-6 overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[760px] border-collapse text-sm">
+            <thead className="bg-gray-50 text-left text-xs font-medium text-gray-500">
+              <tr>
+                <th className="px-4 py-3">Model</th>
+                <th className="px-4 py-3">Loại</th>
+                <th className="px-4 py-3">Trạng thái</th>
+                <th className="px-4 py-3 text-right">Khách hàng (USD)</th>
+                <th className="px-4 py-3 text-right">Freelancer (VND)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {isLoading && <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400">Đang tải danh sách model...</td></tr>}
+              {!isLoading && matches.length === 0 && <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400">Không có model nào trong hóa đơn phù hợp.</td></tr>}
+              {!isLoading && matches.map((model) => (
+                <tr key={model.id} onClick={() => handleSelect(model)} className={`cursor-pointer border-t border-gray-100 hover:bg-gray-50 ${selected?.id === model.id ? 'bg-gray-50' : ''}`}>
+                  <td className="px-4 py-3 font-medium text-gray-900">{model.name}</td>
+                  <td className="px-4 py-3 text-gray-500">{model.type}</td>
+                  <td className="px-4 py-3 text-gray-500">{model.status}</td>
+                  <td className="px-4 py-3 text-right font-mono text-gray-700">{model.customerPrice ? `${fmtUSD(model.customerPrice.unit)} + ${fmtUSD(model.customerPrice.bonus)}` : '—'}</td>
+                  <td className="px-4 py-3 text-right font-mono text-gray-700">{model.freelancerPrice ? `${fmtVND(model.freelancerPrice.unit)} + ${fmtVND(model.freelancerPrice.bonus)}` : '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
-      )}
+      </div>
 
       {/* Thông tin chi tiết model */}
       {selected && (
@@ -166,6 +177,29 @@ function Index() {
                   pendingLabel="Not Paid" 
                 />
               </span>
+            </div>
+          </div>
+
+          <div className="mt-6 border-t border-gray-100 pt-5">
+            <h3 className="mb-3 text-sm font-semibold text-gray-700">Giá theo bảng giá</h3>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {[
+                { label: 'Khách hàng (USD)', price: selected.customerPrice, format: fmtUSD },
+                { label: 'Freelancer (VND)', price: selected.freelancerPrice, format: fmtVND },
+              ].map(({ label, price, format }) => (
+                <div key={label} className="rounded-xl border border-gray-100 bg-gray-50 p-4">
+                  <h4 className="mb-3 text-sm font-semibold text-gray-800">{label}</h4>
+                  {price ? (
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between gap-3"><span className="text-gray-500">Đơn giá</span><span className="font-mono font-medium text-gray-900">{format(price.unit)}</span></div>
+                      <div className="flex justify-between gap-3"><span className="text-gray-500">Bonus</span><span className="font-mono font-medium text-gray-900">{format(price.bonus)}</span></div>
+                      <div className="flex justify-between gap-3 border-t border-gray-200 pt-2"><span className="font-medium text-gray-700">Thành tiền</span><span className="font-mono font-semibold text-gray-900">{format(price.unit + price.bonus)}</span></div>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-400">Chưa có giá trong bảng này.</p>
+                  )}
+                </div>
+              ))}
             </div>
           </div>
         </div>

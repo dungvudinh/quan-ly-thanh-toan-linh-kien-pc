@@ -1,1 +1,63 @@
 @import "tailwindcss";
+
+:root.dark {
+  color-scheme: dark;
+}
+
+:root.dark body {
+  background-color: #111827;
+  color: #f3f4f6;
+}
+
+:root.dark .bg-white { background-color: #1f2937 !important; }
+:root.dark .bg-neutral-50,
+:root.dark .bg-neutral-100,
+:root.dark .bg-gray-50,
+:root.dark .bg-gray-100 { background-color: #1f2937 !important; }
+:root.dark .bg-neutral-200,
+:root.dark .bg-gray-200 { background-color: #374151 !important; }
+:root.dark .bg-neutral-700 { background-color: #111827 !important; }
+:root.dark .bg-neutral-800 { background-color: #111827 !important; }
+
+:root.dark .text-neutral-900,
+:root.dark .text-gray-900 { color: #f9fafb !important; }
+:root.dark .text-neutral-700,
+:root.dark .text-gray-700,
+:root.dark .text-gray-800 { color: #e5e7eb !important; }
+:root.dark .text-neutral-600,
+:root.dark .text-gray-600 { color: #d1d5db !important; }
+:root.dark .text-neutral-500,
+:root.dark .text-gray-500,
+:root.dark .text-neutral-400,
+:root.dark .text-gray-400 { color: #9ca3af !important; }
+
+:root.dark .border-neutral-100,
+:root.dark .border-neutral-200,
+:root.dark .border-gray-50,
+:root.dark .border-gray-100,
+:root.dark .border-gray-200 { border-color: #374151 !important; }
+
+:root.dark input:not([type="checkbox"]),
+:root.dark select,
+:root.dark textarea {
+  border-color: #4b5563;
+  background-color: #111827;
+  color: #f3f4f6;
+}
+:root.dark input::placeholder,
+:root.dark textarea::placeholder { color: #9ca3af; }
+:root.dark input:read-only { background-color: #1f2937; }
+
+:root.dark .bg-emerald-50 { background-color: #064e3b !important; }
+:root.dark .text-emerald-600 { color: #6ee7b7 !important; }
+:root.dark .bg-amber-50 { background-color: #78350f !important; }
+:root.dark .text-amber-600 { color: #fcd34d !important; }
+:root.dark .bg-rose-50,
+:root.dark .bg-red-50 { background-color: #7f1d1d !important; }
+:root.dark .text-rose-500,
+:root.dark .text-red-400 { color: #fca5a5 !important; }
+
+:root.dark .hover\:bg-gray-50:hover,
+:root.dark .hover\:bg-neutral-50:hover { background-color: #374151 !important; }
+:root.dark .hover\:bg-gray-100:hover,
+:root.dark .hover\:bg-neutral-100:hover { background-color: #374151 !important; }

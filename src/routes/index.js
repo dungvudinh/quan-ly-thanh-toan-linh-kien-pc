@@ -21,6 +21,8 @@ const publicRoutes = [
     path: routes.freelancerInvoices,
     component: FreelancerInvoices,
   },
+  { path: routes.createFreelancerInvoice, component: ClientInvoiceEditor },
+  { path: routes.editFreelancerInvoice, component: ClientInvoiceEditor },
   {
     path:routes.pricing, 
     component: Pricing

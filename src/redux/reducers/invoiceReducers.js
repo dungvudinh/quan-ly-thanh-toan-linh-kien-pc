@@ -6,10 +6,10 @@ import {
   REMOVE_MODEL_FROM_INVOICE,
   UPDATE_INVOICE
 } from '../actionTypes';
-import { initialInvoices } from '../../data/mockData.js';
+import { SET_INVOICES } from '../actionTypes';
 
 const initialState = {
-  list: initialInvoices,
+  list: [],
 };
 
 function nextInvoiceNumber(list) {
@@ -18,6 +18,7 @@ function nextInvoiceNumber(list) {
 
 export default function invoiceReducer(state = initialState, action) {
   switch (action.type) {
+    case SET_INVOICES: return { ...state, list: action.payload };
     case CREATE_INVOICE: {
       const newInvoice = {
         id: crypto.randomUUID(),

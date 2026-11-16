@@ -1,7 +1,8 @@
 // pages/InvoiceListPage.jsx
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
+import { api, loadInvoices } from '../../services/api.js';
 import { priceFor, bonusFor, fmtUSD } from '../../utils/pricing.js';
 import { printInvoice, showInvoicePdf } from '../../utils/printInvoice.js';
 import { notifySuccess, notifyWarning } from '../../utils/toast.js';
@@ -13,8 +14,8 @@ function InvoiceTotal({ invoice, clientPrices, freelancerPrices }) {
   const total = invoice.models.reduce(
     (sum, m) =>
       sum +
-      priceFor(m, 'client', clientPrices, freelancerPrices) +
-      bonusFor(m, 'client', clientPrices, freelancerPrices),
+      (m.price ?? priceFor(m, 'client', clientPrices, freelancerPrices)) +
+      (m.bonus ?? bonusFor(m, 'client', clientPrices, freelancerPrices)),
     0
   );
   return <span>{fmtUSD(total)}</span>;
@@ -22,7 +23,8 @@ function InvoiceTotal({ invoice, clientPrices, freelancerPrices }) {
 
 function ClientInvoices() {
   const navigate = useNavigate();
-  const invoices = useSelector((s) => s.invoices.list);
+  const dispatch = useDispatch();
+  const invoices = useSelector((s) => s.invoices.list.filter((inv) => inv.type === 'customer'));
   const clientPrices = useSelector((s) => s.clientPrices);
   const freelancerPrices = useSelector((s) => s.freelancerPrices);
   const { confirm } = useConfirmDialog();
@@ -73,10 +75,14 @@ function ClientInvoices() {
       confirmText: 'Xóa',
     });
     if (!ok) return;
+    try {
+    await api(`/invoices/${invoiceId}`, { method: 'DELETE' });
+    dispatch({ type: 'SET_INVOICES', payload: [...await loadInvoices('customer'), ...await loadInvoices('freelancer')] });
     const remaining = invoices.length - 1;
     const newTotalPages = Math.max(1, Math.ceil(remaining / PAGE_SIZE));
     if (page > newTotalPages) setPage(newTotalPages);
     notifySuccess('Đã xóa hóa đơn');
+    } catch (error) { notifyWarning(error.message); }
   };
 
   const handlePrint = (invoice) => {
@@ -91,8 +97,8 @@ function ClientInvoices() {
       variant: m.status,
       milestone: m.milestone,
       deadline: m.deadline,
-      price: priceFor(m, 'client', clientPrices, freelancerPrices),
-      bonus: bonusFor(m, 'client', clientPrices, freelancerPrices),
+      price: m.price ?? priceFor(m, 'client', clientPrices, freelancerPrices),
+      bonus: m.bonus ?? bonusFor(m, 'client', clientPrices, freelancerPrices),
       note: '',
     }));
     const total = rows.reduce((sum, r) => sum + r.price + r.bonus, 0);
@@ -104,7 +110,7 @@ function ClientInvoices() {
     <section className="px-8 py-8">
       <div className="flex items-end justify-between gap-4 pb-5 mb-6 border-b border-gray-100">
         <div>
-          <h1 className="text-xl font-semibold text-gray-900 tracking-tight">Hóa đơn khách hàng</h1>
+          <h1 className="text-xl font-semibold text-gray-900 tracking-tight">Hóa đơn khách hàng (USD)</h1>
           <p className="text-sm text-gray-400 mt-1">Danh sách hóa đơn đã tạo</p>
         </div>
 

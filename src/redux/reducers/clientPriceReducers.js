@@ -1,5 +1,5 @@
 import { UPDATE_CLIENT_PRICE,ADD_CLIENT_ROW,DELETE_CLIENT_ROW} from "../actionTypes";
-import { initialClientPrices } from "../../data/mockData";
+import { SET_CLIENT_PRICES } from "../actionTypes";
 
 const createDefaultClientRow = () => ({
   new: 0,
@@ -9,8 +9,9 @@ const createDefaultClientRow = () => ({
   modularSimilar: 0
 });
 
-export default function clientPricesReducer(state = initialClientPrices, action) {
+export default function clientPricesReducer(state = {}, action) {
   switch (action.type) {
+    case SET_CLIENT_PRICES: return action.payload;
     case UPDATE_CLIENT_PRICE: {
       const { type, field, value } = action.payload;
       return {

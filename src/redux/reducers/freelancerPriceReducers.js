@@ -1,5 +1,5 @@
 import { UPDATE_FREELANCER_PRICE,ADD_FREELANCER_ROW,DELETE_FREELANCER_ROW } from "../actionTypes";
-import { initialFreelancerPrices } from "../../data/mockData";
+import { SET_FREELANCER_PRICES } from "../actionTypes";
 
 const createDefaultFreelancerRow = () => ({
   price: 0,
@@ -7,8 +7,9 @@ const createDefaultFreelancerRow = () => ({
   similar1: 0,
   similar2: 0
 });
-export default function freelancerPricesReducer(state = initialFreelancerPrices, action) {
+export default function freelancerPricesReducer(state = {}, action) {
   switch (action.type) {
+    case SET_FREELANCER_PRICES: return action.payload;
     case UPDATE_FREELANCER_PRICE: {
       const { type, field, value } = action.payload;
       return {

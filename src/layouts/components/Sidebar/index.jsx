@@ -17,7 +17,7 @@ function Index({navItems}) {
         dispatch(setActiveTab(tabKey));
     }
   return (
-    <aside className={`flex h-screen w-64 flex-col justify-between border-r border-neutral-100  ${theme === 'dark' ? 'bg-neutral-800' : 'bg-neutral-100'} px-4 py-6`}>
+    <aside className={`flex h-screen w-64 flex-col justify-between border-r ${theme === 'dark' ? 'border-neutral-700 bg-neutral-800' : 'border-neutral-300 bg-neutral-100'} px-4 py-6`}>
       <div>
         {/* Logo */}
         <div className="mb-8 flex items-center gap-2 px-2">
@@ -40,7 +40,7 @@ function Index({navItems}) {
                 onClick={() => handleChangeTab(item.key)}
                 className={`group relative cursor-pointer flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
                   activeTab === item.key
-                    ? `shadow-sm ${theme === 'dark' ? 'bg-white text-neutral-900' : 'bg-neutral-900 text-white'}`
+                    ? `shadow-sm ${theme === 'dark' ? 'bg-gray-200 text-neutral-900' : 'bg-neutral-900 text-white'}`
                     : `${theme === 'dark' ? 'text-white hover:bg-white hover:text-neutral-900' : 'text-neutral-500 hover:bg-neutral-900 hover:text-white'}`
                 }`}
               >
@@ -61,7 +61,7 @@ function Index({navItems}) {
       </div>
 
       {/* Bottom utilities */}
-      <div className="flex flex-col gap-y-2 rounded-full  w-10 items-center justify-center p-2 bg-white">
+      <div className={`flex w-10 flex-col items-center justify-center gap-y-2 rounded-full p-2 ${theme === 'dark' ? 'bg-neutral-700' : 'bg-white'}`}>
         <button onClick={()=>dispatch(setTheme('dark'))} className={`cursor-pointer w-full flex items-center justify-center rounded-full ${theme === 'dark' ? 'bg-neutral-100' : ''}`}>
             <Moon className={`w-4 text-neutral-400 rounded-full ${theme === 'dark' ? 'text-neutral-700' : ''}`}/>
         </button>

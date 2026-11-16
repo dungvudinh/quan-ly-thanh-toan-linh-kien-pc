@@ -37,6 +37,8 @@ function registerFonts(doc) {
  * totalLabel: '$648'  (số đã format sẵn, không có ký hiệu $ ở đầu -> truyền total number cũng được)
  */
 export function printInvoice({ invoice, rows, total }) {
+  const currency = invoice.type === 'freelancer' ? 'VND' : 'USD';
+  const formatMoney = (amount) => `${Number(amount || 0).toLocaleString(currency === 'VND' ? 'vi-VN' : 'en-US')} ${currency}`;
   const doc = new jsPDF({ orientation:'landscape',unit: 'pt', format: 'a4' }); // pt cho dễ căn chỉnh
   registerFonts(doc)
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -129,8 +131,8 @@ export function printInvoice({ invoice, rows, total }) {
     r.variant,
     r.milestone ?? '',
     r.deadline,
-    r.price,
-    r.bonus || 0,
+    formatMoney(r.price),
+    formatMoney(r.bonus),
     r.note || '',
   ]);
 
@@ -146,7 +148,7 @@ export function printInvoice({ invoice, rows, total }) {
         styles: { halign: 'center', fontStyle: 'bold', fontSize: 13 },
       },
       {
-        content: `$ ${total}`,
+        content: formatMoney(total),
         colSpan: 2,
         styles: { halign: 'center', fontStyle: 'bold', fontSize: 13 },
       },

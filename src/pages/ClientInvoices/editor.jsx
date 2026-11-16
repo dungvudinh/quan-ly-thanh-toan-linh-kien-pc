@@ -1,12 +1,11 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { useParams, useNavigate } from 'react-router-dom';
-import { createInvoice, updateInvoice, updateInvoicePaid } from '../../redux/actions/invoiceActions.js';
-import { priceFor, bonusFor, fmtUSD } from '../../utils/pricing.js';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { priceFor, bonusFor, fmtUSD, fmtVND } from '../../utils/pricing.js';
 import AddModel from '../../components/AddModel.jsx';
 import { notifySuccess, notifyWarning } from '../../utils/toast.js';
 import { Printer } from 'lucide-react';
-import { initialInvoices,initialModels } from '../../data/mockData.js'; // Đường dẫn tới file mockData
+import { api, loadInvoices, loadModels } from '../../services/api.js';
 const DEFAULT_FROM = {
   name: 'Lạc Việt Studio',
   email: 'lacvietstu@gmail.com',
@@ -18,18 +17,18 @@ const EMPTY_TO = { name: '', email: '', address: '' };
 function ClientInvoiceEditor() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
   const { id } = useParams(); // Lấy id từ URL (undefined nếu là /create)
+  const type = location.pathname.startsWith('/freelancer-invoices') ? 'freelancer' : 'customer';
+  const audience = type === 'customer' ? 'client' : 'freelancer';
+  const invoicePath = type === 'customer' ? '/client-invoices' : '/freelancer-invoices';
 
   const clientPrices = useSelector((s) => s.clientPrices);
   const freelancerPrices = useSelector((s) => s.freelancerPrices);
 
   // Xác định mode dựa trên sự tồn tại của id
   const isCreateMode = !id;
-  // Lấy invoice từ mockData dựa trên id
-  const invoice = useMemo(() => {
-    if (isCreateMode) return null;
-    return initialInvoices.find((inv) => inv.id === id) ?? null;
-  }, [id, isCreateMode]);
+  const invoice = useSelector((s) => s.invoices.list.find((item) => item.id === id && item.type === type));
 
   const [isModelModalOpen, setIsModelModalOpen] = useState(false);
 
@@ -64,8 +63,8 @@ function ClientInvoiceEditor() {
       draftModels.reduce(
         (sum, m) =>
           sum +
-          priceFor(m, 'client', clientPrices, freelancerPrices) +
-          bonusFor(m, 'client', clientPrices, freelancerPrices),
+          priceFor(m, audience, clientPrices, freelancerPrices) +
+          bonusFor(m, audience, clientPrices, freelancerPrices),
         0
       ),
     [draftModels, clientPrices, freelancerPrices]
@@ -90,7 +89,7 @@ function ClientInvoiceEditor() {
     setDraftModels((prev) => prev.filter((m) => m.id !== modelId));
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!draftTo.name.trim() || !draftTo.email.trim()) {
       notifyWarning('Vui lòng nhập đầy đủ thông tin khách hàng (To)!');
       return;
@@ -100,49 +99,39 @@ function ClientInvoiceEditor() {
       return;
     }
 
+    try {
     if (isCreateMode) {
-      dispatch(createInvoice({ from: draftFrom, to: draftTo, models: draftModels }));
+        await api('/invoices', { method: 'POST', body: JSON.stringify({ type, from: draftFrom, to: draftTo, models: draftModels }) });
       notifySuccess('Đã tạo hóa đơn mới!');
     } else {
-      dispatch(updateInvoice(invoice.id, { from: draftFrom, to: draftTo, models: draftModels }));
+      await api(`/invoices/${invoice.id}`, { method: 'PUT', body: JSON.stringify({ from: draftFrom, to: draftTo, models: draftModels }) });
       notifySuccess(`Đã lưu hóa đơn ${invoice.id}`);
     }
 
-    navigate('/client-invoices'); // Quay về danh sách
+    dispatch({ type: 'SET_INVOICES', payload: [...await loadInvoices('customer'), ...await loadInvoices('freelancer')] });
+    dispatch({ type: 'SET_MODELS', payload: await loadModels() });
+    navigate(invoicePath);
+    } catch (error) { notifyWarning(error.message); }
   };
 
-  const handleTogglePaid = () => {
+  const handleTogglePaid = async () => {
   if (!invoice) return;
 
   const nextPaid = !invoice.paid;
 
-  // 1. Cập nhật trạng thái paid của invoice
-  dispatch(updateInvoicePaid(invoice.id, nextPaid));
-
-  // 2. Cập nhật clientPaid cho các model tương ứng trong initialModels
-  //    (chỉ cập nhật những model thuộc invoice hiện tại)
-  const modelIdsInInvoice = new Set(
-    (invoice.models ?? []).map((m) => m.id)
-  );
-
-  initialModels.forEach((m) => {
-    if (modelIdsInInvoice.has(m.id)) {
-      m.clientPaid = nextPaid;
-    }
-  });
-
-  // 3. Cập nhật draftModels để UI phản ánh ngay
-  setDraftModels((prev) =>
-    prev.map((m) => ({ ...m, clientPaid: nextPaid }))
-  );
-
-  notifySuccess(
-    nextPaid ? 'Đã đánh dấu Đã thanh toán' : 'Đã chuyển về Chưa thanh toán'
-  );
+  try {
+    await api(`/invoices/${invoice.id}/pay`, { method: 'PATCH', body: JSON.stringify({ isPaid: nextPaid }) });
+    const refreshedInvoices = [...await loadInvoices('customer'), ...await loadInvoices('freelancer')];
+    dispatch({ type: 'SET_INVOICES', payload: refreshedInvoices });
+    dispatch({ type: 'SET_MODELS', payload: await loadModels() });
+    const paidField = type === 'customer' ? 'clientPaid' : 'freelancerPaid';
+    setDraftModels((prev) => prev.map((m) => ({ ...m, [paidField]: nextPaid })));
+    notifySuccess(nextPaid ? 'Đã đánh dấu Đã thanh toán' : 'Đã chuyển về Chưa thanh toán');
+  } catch (error) { notifyWarning(error.message); }
 };
 
   const handleBack = () => {
-    navigate('/client-invoices');
+  navigate(invoicePath);
   };
 
   // Nếu đang ở edit mode mà chưa tìm thấy invoice, không render gì
@@ -157,8 +146,8 @@ function ClientInvoiceEditor() {
       <div className="flex items-center justify-between">
         <div className='flex flex-row'>
             <div>
-                <h2 className="text-lg font-semibold text-gray-900">
-                    {isCreateMode ? 'Tạo hóa đơn mới' : `Hóa đơn #${invoice.invoiceNumber}`}
+            <h2 className="text-lg font-semibold text-gray-900">
+                    {isCreateMode ? `Tạo hóa đơn mới (${type === 'customer' ? 'USD' : 'VND'})` : `Hóa đơn #${invoice.invoiceNumber} (${type === 'customer' ? 'USD' : 'VND'})`}
                 </h2>
                 {!isCreateMode && (
                     <p className="text-sm text-gray-400 mt-0.5">Ngày tạo: {invoice.createdAt}</p>
@@ -178,7 +167,7 @@ function ClientInvoiceEditor() {
         
         <div className="flex items-center gap-3">
           {!isCreateMode && (
-            <button type="button" onClick={() => navigate(`/client-invoices/${invoice.id}/print`)} className="text-sm font-medium text-gray-600 hover:text-gray-900 flex flex-row items-center cursor-pointer mr-4">
+            <button type="button" onClick={() => navigate(`${invoicePath}/${invoice.id}/print`)} className="text-sm font-medium text-gray-600 hover:text-gray-900 flex flex-row items-center cursor-pointer mr-4">
               <Printer width={16} className='mr-2'/>
               In hóa đơn
             </button>
@@ -282,16 +271,16 @@ function ClientInvoiceEditor() {
               </tr>
             )}
             {draftModels.map((m) => {
-              const price = priceFor(m, 'client', clientPrices, freelancerPrices);
-              const bonus = bonusFor(m, 'client', clientPrices, freelancerPrices);
+              const price = priceFor(m, audience, clientPrices, freelancerPrices);
+              const bonus = bonusFor(m, audience, clientPrices, freelancerPrices);
               return (
                 <tr key={m.id} className="border-t border-gray-100">
                   <td className="py-2 pr-3 font-medium text-gray-900">{m.name}</td>
                   <td className="py-2 px-3 text-gray-500">{m.type}</td>
                   <td className="py-2 px-3 text-gray-500">{m.status}</td>
-                  <td className="py-2 px-3 text-right font-mono">{fmtUSD(price)}</td>
-                  <td className="py-2 px-3 text-right font-mono">{bonus ? fmtUSD(bonus) : '—'}</td>
-                  <td className="py-2 px-3 text-right font-mono font-semibold">{fmtUSD(price + bonus)}</td>
+                  <td className="py-2 px-3 text-right font-mono">{audience === 'client' ? fmtUSD(price) : fmtVND(price)}</td>
+                  <td className="py-2 px-3 text-right font-mono">{bonus ? (audience === 'client' ? fmtUSD(bonus) : fmtVND(bonus)) : '—'}</td>
+                  <td className="py-2 px-3 text-right font-mono font-semibold">{audience === 'client' ? fmtUSD(price + bonus) : fmtVND(price + bonus)}</td>
                   <td className="py-2 pl-3 text-right">
                     <button
                       type="button"
@@ -309,7 +298,7 @@ function ClientInvoiceEditor() {
             <tfoot>
               <tr className="border-t-2 border-gray-900">
                 <td colSpan={5} className="pt-3 font-semibold text-gray-900">Tổng cộng</td>
-                <td className="pt-3 text-right font-mono font-semibold">{fmtUSD(total)}</td>
+                <td className="pt-3 text-right font-mono font-semibold">{audience === 'client' ? fmtUSD(total) : fmtVND(total)}</td>
                 <td></td>
               </tr>
             </tfoot>
@@ -348,6 +337,7 @@ function ClientInvoiceEditor() {
         isOpen={isModelModalOpen}
         onClose={() => setIsModelModalOpen(false)}
         onAddModel={handleAddModel}
+        audience={audience}
       />
     </div>
   );
