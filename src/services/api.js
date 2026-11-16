@@ -46,8 +46,8 @@ export async function deletePriceList(name) {
 
 export function priceListToTables(rows) {
   return rows.reduce((tables, row) => {
-    tables.client[row.name] = Object.fromEntries(['new', 'similar1', 'similar2', 'modular', 'bonus'].map((key) => [key, row[key].usd]));
-    tables.freelancer[row.name] = Object.fromEntries(['new', 'similar1', 'similar2', 'modular', 'bonus'].map((key) => [key, row[key].vnd]));
+    tables.client[row.name] = Object.fromEntries(['new', 'similar1', 'similar2', 'modular', 'modularSimilar', 'bonus'].map((key) => [key, row[key]?.usd ?? 0]));
+    tables.freelancer[row.name] = Object.fromEntries(['new', 'similar1', 'similar2', 'modular', 'modularSimilar', 'bonus'].map((key) => [key, row[key]?.vnd ?? 0]));
     tables.ids[row.name] = row._id;
     return tables;
   }, { client: {}, freelancer: {}, ids: {} });

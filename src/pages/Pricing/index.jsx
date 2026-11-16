@@ -5,7 +5,8 @@ import { useState } from "react";
 import { createPriceList, updatePriceList, deletePriceList, loadPriceLists, priceListToTables } from '../../services/api.js';
 
 function Index() {
-  const emptyNewType = () => ({ name: '', new: { usd: '', vnd: '' }, similar1: { usd: '', vnd: '' }, similar2: { usd: '', vnd: '' }, modular: { usd: '', vnd: '' }, bonus: { usd: '', vnd: '' } });
+  const priceFields = ['new', 'similar1', 'similar2', 'modular', 'modularSimilar', 'bonus'];
+  const emptyNewType = () => ({ name: '', ...Object.fromEntries(priceFields.map((field) => [field, { usd: '', vnd: '' }])) });
   const dispatch = useDispatch();
   const clientPrices = useSelector((state) => state.clientPrices);
   const freelancerPrices = useSelector((state) => state.freelancerPrices);
@@ -25,7 +26,7 @@ function Index() {
     setEditingType(type);
     setNewType({
       name: type,
-      ...Object.fromEntries(['new', 'similar1', 'similar2', 'modular', 'bonus'].map((field) => [field, {
+      ...Object.fromEntries(priceFields.map((field) => [field, {
         usd: clientPrices[type]?.[field] ?? 0,
         vnd: freelancerPrices[type]?.[field] ?? 0,
       }])),
@@ -86,17 +87,17 @@ function Index() {
 
       <div className="rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[1100px] border-collapse">
+          <table className="w-full min-w-[1320px] border-collapse">
             <thead>
               <tr className="border-b border-gray-100 text-xs font-semibold text-gray-600">
                 <th rowSpan={2} className="px-4 py-3 text-left">Loại linh kiện</th>
-                <th colSpan={5} className="border-l border-gray-100 px-3 py-3 text-center">Khách hàng (USD)</th>
-                <th colSpan={5} className="border-l border-gray-100 px-3 py-3 text-center">Freelancer (VND)</th>
+                <th colSpan={6} className="border-l border-gray-100 px-3 py-3 text-center">Khách hàng (USD)</th>
+                <th colSpan={6} className="border-l border-gray-100 px-3 py-3 text-center">Freelancer (VND)</th>
                 <th rowSpan={2} className="border-l border-gray-100 px-3 py-3 text-center">Thao tác</th>
               </tr>
               <tr className="border-b border-gray-100 text-xs font-medium text-gray-400">
-                {['New', 'Sim. 1', 'Sim. 2', 'Modular', 'Bonus', 'New', 'Sim. 1', 'Sim. 2', 'Modular', 'Bonus'].map((label, index) => (
-                  <th key={`${label}-${index}`} className={`px-2 py-2 text-right ${index === 0 || index === 5 ? 'border-l border-gray-100' : ''}`}>{label}</th>
+                {['New', 'Sim. 1', 'Sim. 2', 'Modular', 'Modular Similar', 'Bonus', 'New', 'Sim. 1', 'Sim. 2', 'Modular', 'Modular Similar', 'Bonus'].map((label, index) => (
+                  <th key={`${label}-${index}`} className={`px-2 py-2 text-right ${index === 0 || index === 6 ? 'border-l border-gray-100' : ''}`}>{label}</th>
                 ))}
               </tr>
             </thead>
@@ -107,10 +108,10 @@ function Index() {
                 return (
                   <tr key={type} className="border-b border-gray-50 last:border-0">
                     <td className="whitespace-nowrap px-4 py-2.5 font-medium text-gray-900">{type}</td>
-                    {['new', 'similar1', 'similar2', 'modular', 'bonus'].map((field) => (
+                    {priceFields.map((field) => (
                       <PriceValue key={`usd-${field}`} className={field === 'new' ? 'border-l border-gray-100' : ''} value={client[field] ?? 0} locale="en-US" />
                     ))}
-                    {['new', 'similar1', 'similar2', 'modular', 'bonus'].map((field) => (
+                    {priceFields.map((field) => (
                       <PriceValue key={`vnd-${field}`} className={field === 'new' ? 'border-l border-gray-100' : ''} value={freelancer[field] ?? 0} locale="vi-VN" />
                     ))}
                     <td className="border-l border-gray-100 px-3 py-2.5 text-center">
@@ -143,7 +144,7 @@ function Index() {
             </div>
             <div className="space-y-2">
               {[
-                ['new', 'New'], ['similar1', 'Similar 1'], ['similar2', 'Similar 2'], ['modular', 'Modular'], ['bonus', 'Bonus'],
+                ['new', 'New'], ['similar1', 'Similar 1'], ['similar2', 'Similar 2'], ['modular', 'Modular'], ['modularSimilar', 'Modular Similar'], ['bonus', 'Bonus'],
               ].map(([field, label]) => (
                 <div key={field} className="grid grid-cols-[1fr_1fr_1fr] items-center gap-3">
                   <span className="text-sm text-gray-600">{label}</span>

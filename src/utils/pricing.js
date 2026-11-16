@@ -13,19 +13,22 @@ export function fmtVND(n) {
  * dựa trên bảng giá tương ứng (khách hàng hoặc freelancer).
  */
 export function priceFor(model, audience, clientPrices, freelancerPrices) {
+  const status = String(model.status || "").toLowerCase().replace(/\s+/g, "");
   if (audience === "client") {
     const p = clientPrices[model.type];
     if (!p) return 0;
-    if (model.status === "New") return p.new;
-    if (model.status === "Similar1") return p.similar1;
-    if (model.status === "Similar2") return p.similar2;
+    if (status === "new") return p.new;
+    if (status === "similar1") return p.similar1;
+    if (status === "similar2") return p.similar2;
+    if (status === "modularsimilar") return p.modularSimilar;
     return p.modular;
   }
   const p = freelancerPrices[model.type];
   if (!p) return 0;
-  if (model.status === "New") return p.new;
-  if (model.status === "Similar1") return p.similar1;
-  if (model.status === "Similar2") return p.similar2;
+  if (status === "new") return p.new;
+  if (status === "similar1") return p.similar1;
+  if (status === "similar2") return p.similar2;
+  if (status === "modularsimilar") return p.modularSimilar;
   return p.modular;
 }
 
@@ -34,7 +37,8 @@ export function priceFor(model, audience, clientPrices, freelancerPrices) {
  * và loại thuộc { Mainboard, Case, VGA }.
  */
 export function bonusFor(model, audience, clientPrices, freelancerPrices) {
-  if (model.status !== "New" || model.deadline !== "OK") return 0;
+  const status = String(model.status || "").toLowerCase().replace(/\s+/g, "");
+  if (status !== "new" || model.deadline !== "OK") return 0;
   if (!BONUS_TYPES.includes(model.type)) return 0;
   const p = audience === "client" ? clientPrices[model.type] : freelancerPrices[model.type];
   if (!p) return 0;

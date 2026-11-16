@@ -11,7 +11,7 @@ function AddModel({ isOpen, onClose, onAddModel, audience = 'client' }) {
   const [formData, setFormData] = useState({
     name: '',
     type: '',
-    status: 'New',
+    status: 'new',
     milestone: 0,
     deadline: 'OK',
     staff: '',
@@ -22,7 +22,7 @@ function AddModel({ isOpen, onClose, onAddModel, audience = 'client' }) {
       setFormData({
         name: '',
         type: Object.keys(prices)[0] || '',
-        status: 'New',
+        status: 'new',
         milestone: 0,
         deadline: 'OK',
         staff: '',
@@ -35,9 +35,11 @@ function AddModel({ isOpen, onClose, onAddModel, audience = 'client' }) {
     { title: 'Similar 1', key: 'similar1' },
     { title: 'Similar 2', key: 'similar2' },
     { title: 'Modular', key: 'modular' },
+    { title: 'Modular Similar', key: 'modularsimilar' },
   ];
 
   const typeOptions = Object.keys(prices);
+  const statusLabel = statusOptions.find(({ key }) => key === formData.status)?.title || formData.status;
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -252,16 +254,16 @@ function AddModel({ isOpen, onClose, onAddModel, audience = 'client' }) {
             <p className="font-medium text-gray-700 mb-1">🔍 Xem trước:</p>
             <div className="space-y-1 text-gray-600">
               <p>Loại: <span className="font-mono">{formData.type}</span></p>
-              <p>Trạng thái: <span className="font-mono">{formData.status}</span></p>
+              <p>Trạng thái: <span className="font-mono">{statusLabel}</span></p>
               {formData.type && prices[formData.type] && (
                 <>
-                  <p>Giá {formData.status}: <span className="font-mono">{audience === 'client' ? '$' : ''}{prices[formData.type][formData.status.toLowerCase()] || 0}{audience === 'freelancer' ? ' ₫' : ''}</span></p>
+                  <p>Giá {statusLabel}: <span className="font-mono">{audience === 'client' ? '$' : ''}{prices[formData.type][formData.status.toLowerCase() === 'modularsimilar' ? 'modularSimilar' : formData.status.toLowerCase()] || 0}{audience === 'freelancer' ? ' ₫' : ''}</span></p>
                   {formData.deadline === 'OK' && (
                     <p>Bonus: <span className="font-mono">{audience === 'client' ? '$' : ''}{prices[formData.type].bonus || 0}{audience === 'freelancer' ? ' ₫' : ''}</span></p>
                   )}
                   <p className="font-semibold text-gray-900">
                     Thành tiền: {audience === 'client' ? '$' : ''}{(
-                      (prices[formData.type]?.[formData.status.toLowerCase()] || 0) +
+                      (prices[formData.type]?.[formData.status.toLowerCase() === 'modularsimilar' ? 'modularSimilar' : formData.status.toLowerCase()] || 0) +
                       (formData.deadline === 'OK' ? (prices[formData.type]?.bonus || 0) : 0)
                     )}{audience === 'freelancer' ? ' ₫' : ''}
                   </p>
