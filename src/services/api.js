@@ -32,7 +32,7 @@ export async function updatePriceList(name, prices) {
 }
 
 function toPriceFields(prices) {
-  return Object.fromEntries(['new', 'similar1', 'similar2', 'modular', 'bonus'].map((field) => [field, {
+  return Object.fromEntries(['new', 'similar1', 'similar2', 'modular', 'modularSimilar', 'bonus'].map((field) => [field, {
     usd: Number(prices[field]?.usd) || 0,
     vnd: Number(prices[field]?.vnd) || 0,
   }]));
