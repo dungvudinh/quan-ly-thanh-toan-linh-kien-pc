@@ -87,24 +87,28 @@ function Index() {
 
       <div className="mb-6 overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[760px] border-collapse text-sm">
+          <table className="w-full min-w-[980px] border-collapse text-sm">
             <thead className="bg-gray-50 text-left text-xs font-medium text-gray-500">
               <tr>
                 <th className="px-4 py-3">Model</th>
                 <th className="px-4 py-3">Loại</th>
                 <th className="px-4 py-3">Trạng thái</th>
+                <th className="px-4 py-3 text-center">Hóa đơn khách hàng</th>
+                <th className="px-4 py-3 text-center">Hóa đơn freelancer</th>
                 <th className="px-4 py-3 text-right">Khách hàng (USD)</th>
                 <th className="px-4 py-3 text-right">Freelancer (VND)</th>
               </tr>
             </thead>
             <tbody>
-              {isLoading && <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400">Đang tải danh sách model...</td></tr>}
-              {!isLoading && matches.length === 0 && <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400">Không có model nào trong hóa đơn phù hợp.</td></tr>}
+              {isLoading && <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400">Đang tải danh sách model...</td></tr>}
+              {!isLoading && matches.length === 0 && <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400">Không có model nào trong hóa đơn phù hợp.</td></tr>}
               {!isLoading && matches.map((model) => (
                 <tr key={model.id} onClick={() => handleSelect(model)} className={`cursor-pointer border-t border-gray-100 hover:bg-gray-50 ${selected?.id === model.id ? 'bg-gray-50' : ''}`}>
                   <td className="px-4 py-3 font-medium text-gray-900">{model.name}</td>
                   <td className="px-4 py-3 text-gray-500">{model.type}</td>
                   <td className="px-4 py-3 text-gray-500">{model.status}</td>
+                  <td className="px-4 py-3 text-center"><PaidBadge paid={model.clientPaid} paidLabel="Đã thanh toán" pendingLabel="Chưa thanh toán" /></td>
+                  <td className="px-4 py-3 text-center"><PaidBadge paid={model.freelancerPaid} paidLabel="Đã thanh toán" pendingLabel="Chưa thanh toán" /></td>
                   <td className="px-4 py-3 text-right font-mono text-gray-700">{model.customerPrice ? `${fmtUSD(model.customerPrice.unit)} + ${fmtUSD(model.customerPrice.bonus)}` : '—'}</td>
                   <td className="px-4 py-3 text-right font-mono text-gray-700">{model.freelancerPrice ? `${fmtVND(model.freelancerPrice.unit)} + ${fmtVND(model.freelancerPrice.bonus)}` : '—'}</td>
                 </tr>

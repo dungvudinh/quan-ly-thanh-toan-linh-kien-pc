@@ -63,9 +63,9 @@ function AddModel({ isOpen, onClose, onAddModel, audience = 'client' }) {
    * Tìm hóa đơn chứa model (theo id).
    * Trả về invoice hoặc null.
    */
-  const findInvoiceContainingModel = (modelId) => {
+  const findInvoiceContainingModel = (modelId, invoiceType) => {
     return (
-      invoices.find((inv) =>
+      invoices.find((inv) => inv.type === invoiceType &&
         inv.models?.some((m) => m.id === modelId)
       ) ?? null
     );
@@ -112,24 +112,21 @@ function AddModel({ isOpen, onClose, onAddModel, audience = 'client' }) {
     const newModel = buildModel();
     if (!newModel) return;
 
-    // 1. Kiểm tra model đã tồn tại trong hệ thống chưa
+    // Model được dùng lại giữa hai loại hóa đơn, nhưng không được lặp
+    // trong hai hóa đơn cùng loại.
     const duplicateModel = findDuplicateModel(newModel);
-
+    const invoiceType = audience === 'client' ? 'customer' : 'freelancer';
     if (duplicateModel) {
-      // 2. Tìm hóa đơn chứa model trùng
-      const invoice = findInvoiceContainingModel(duplicateModel.id);
-
+      const invoice = findInvoiceContainingModel(duplicateModel.id, invoiceType);
       if (invoice) {
         notifyWarning(
           `Model "${newModel.name}" đã tồn tại trong hóa đơn #${invoice.invoiceNumber}!`
         );
-      } else {
-        // Model đã có trong hệ thống nhưng chưa được đưa vào hóa đơn.
-        notifyWarning(
-          `Model "${newModel.name}" đã tồn tại trong hệ thống!`
-        );
+        return;
       }
-      return;
+
+      // Dùng lại model hiện có để giữ đúng thông tin và trạng thái thanh toán.
+      Object.assign(newModel, duplicateModel, { id: duplicateModel.id });
     }
 
     // 3. Thêm model vào hóa đơn (draft)

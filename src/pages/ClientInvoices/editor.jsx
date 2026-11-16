@@ -12,7 +12,24 @@ const DEFAULT_FROM = {
   address: 'Lk16.29 Hinode Royal Park city, Ha Noi, Viet Nam',
 };
 
-const EMPTY_TO = { name: '', email: '', address: '' };
+const EMPTY_TO = { name: 'BuildCores LLC', email: 'mohit@buildcores.com', address: '993 Throop St Dickson City, PA 18519 United States of America' };
+const partySnapshot = (party = {}) => ({
+  name: party.name ?? '',
+  email: party.email ?? '',
+  address: party.address ?? '',
+});
+const modelSnapshot = (models = []) => models.map((model) => ({
+  id: String(model.id ?? model._id ?? ''),
+  name: model.name ?? '',
+  type: model.type ?? '',
+  status: model.status ?? '',
+  milestone: model.milestone ?? 0,
+  deadline: model.deadline ?? 'OK',
+  staff: model.staff ?? '',
+  hasBonus: model.hasBonus,
+  clientPaid: Boolean(model.clientPaid),
+  freelancerPaid: Boolean(model.freelancerPaid),
+}));
 
 function ClientInvoiceEditor() {
   const dispatch = useDispatch();
@@ -36,6 +53,7 @@ function ClientInvoiceEditor() {
   const [draftFrom, setDraftFrom] = useState(DEFAULT_FROM);
   const [draftTo, setDraftTo] = useState(EMPTY_TO);
   const [draftModels, setDraftModels] = useState([]);
+  const [draftPaid, setDraftPaid] = useState(false);
 
   // Đồng bộ draft state khi invoice thay đổi (lần đầu load hoặc khi id đổi)
   useEffect(() => {
@@ -43,11 +61,13 @@ function ClientInvoiceEditor() {
       setDraftFrom(invoice.from ?? DEFAULT_FROM);
       setDraftTo(invoice.to ?? EMPTY_TO);
       setDraftModels(invoice.models ?? []);
+      setDraftPaid(Boolean(invoice.paid));
     } else {
       // Create mode
       setDraftFrom(DEFAULT_FROM);
       setDraftTo(EMPTY_TO);
       setDraftModels([]);
+      setDraftPaid(false);
     }
   }, [invoice]);
   // Xử lý trường hợp id không hợp lệ (chỉ ở edit mode)
@@ -69,6 +89,15 @@ function ClientInvoiceEditor() {
       ),
     [draftModels, clientPrices, freelancerPrices]
   );
+
+  const originalFrom = invoice?.from ?? DEFAULT_FROM;
+  const originalTo = invoice?.to ?? EMPTY_TO;
+  const originalModels = invoice?.models ?? [];
+  const hasUnsavedChanges =
+    JSON.stringify(partySnapshot(draftFrom)) !== JSON.stringify(partySnapshot(originalFrom)) ||
+    JSON.stringify(partySnapshot(draftTo)) !== JSON.stringify(partySnapshot(originalTo)) ||
+    JSON.stringify(modelSnapshot(draftModels)) !== JSON.stringify(modelSnapshot(originalModels)) ||
+    draftPaid !== Boolean(invoice?.paid);
 
   const handleFromChange = (e) => {
     const { name, value } = e.target;
@@ -100,35 +129,38 @@ function ClientInvoiceEditor() {
     }
 
     try {
-    if (isCreateMode) {
+      if (isCreateMode) {
         await api('/invoices', { method: 'POST', body: JSON.stringify({ type, from: draftFrom, to: draftTo, models: draftModels }) });
-      notifySuccess('Đã tạo hóa đơn mới!');
-    } else {
-      await api(`/invoices/${invoice.id}`, { method: 'PUT', body: JSON.stringify({ from: draftFrom, to: draftTo, models: draftModels }) });
-      notifySuccess(`Đã lưu hóa đơn ${invoice.id}`);
-    }
+        notifySuccess('Đã tạo hóa đơn mới!');
+      } else {
+        const paidChanged = draftPaid !== Boolean(invoice.paid);
+        const saveInvoice = () => api(`/invoices/${invoice.id}`, {
+          method: 'PUT',
+          body: JSON.stringify({ from: draftFrom, to: draftTo, models: draftModels }),
+        });
+        const savePayment = () => api(`/invoices/${invoice.id}/pay`, {
+          method: 'PATCH',
+          body: JSON.stringify({ isPaid: draftPaid }),
+        });
 
-    dispatch({ type: 'SET_INVOICES', payload: [...await loadInvoices('customer'), ...await loadInvoices('freelancer')] });
-    dispatch({ type: 'SET_MODELS', payload: await loadModels() });
-    navigate(invoicePath);
+        // Hóa đơn đã thanh toán phải được chuyển về chưa thanh toán trước khi
+        // API cho phép sửa nội dung hóa đơn.
+        if (paidChanged && invoice.paid && !draftPaid) await savePayment();
+        await saveInvoice();
+        if (paidChanged && !invoice.paid && draftPaid) await savePayment();
+        notifySuccess(`Đã lưu hóa đơn ${invoice.invoiceNumber}`);
+      }
+
+      dispatch({ type: 'SET_INVOICES', payload: [...await loadInvoices('customer'), ...await loadInvoices('freelancer')] });
+      dispatch({ type: 'SET_MODELS', payload: await loadModels() });
+      navigate(invoicePath);
     } catch (error) { notifyWarning(error.message); }
   };
 
   const handleTogglePaid = async () => {
-  if (!invoice) return;
-
-  const nextPaid = !invoice.paid;
-
-  try {
-    await api(`/invoices/${invoice.id}/pay`, { method: 'PATCH', body: JSON.stringify({ isPaid: nextPaid }) });
-    const refreshedInvoices = [...await loadInvoices('customer'), ...await loadInvoices('freelancer')];
-    dispatch({ type: 'SET_INVOICES', payload: refreshedInvoices });
-    dispatch({ type: 'SET_MODELS', payload: await loadModels() });
-    const paidField = type === 'customer' ? 'clientPaid' : 'freelancerPaid';
-    setDraftModels((prev) => prev.map((m) => ({ ...m, [paidField]: nextPaid })));
-    notifySuccess(nextPaid ? 'Đã đánh dấu Đã thanh toán' : 'Đã chuyển về Chưa thanh toán');
-  } catch (error) { notifyWarning(error.message); }
-};
+    if (!invoice) return;
+    setDraftPaid((current) => !current);
+  };
 
   const handleBack = () => {
   navigate(invoicePath);
@@ -156,10 +188,10 @@ function ClientInvoiceEditor() {
             {!isCreateMode && (
                 <span
                 className={`text-xs font-medium px-2 py-1 rounded-full ${
-                    invoice.paid ? ' text-emerald-600' : ' text-amber-600 d-block'
+                    draftPaid ? ' text-emerald-600' : ' text-amber-600 d-block'
                 }`}
                 >
-                {invoice.paid ? 'Đã thanh toán' : 'Chưa thanh toán'}
+                {draftPaid ? 'Đã thanh toán' : 'Chưa thanh toán'}
                 </span>
             )}
         </div>
@@ -213,6 +245,7 @@ function ClientInvoiceEditor() {
           <input
             type="text"
             name="name"
+
             value={draftTo.name}
             onChange={handleToChange}
             placeholder="Tên khách hàng"
@@ -314,7 +347,7 @@ function ClientInvoiceEditor() {
             onClick={handleTogglePaid}
             className="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-200 hover:bg-gray-50 rounded-lg mr-auto cursor-pointer"
           >
-            {invoice.paid ? 'Đánh dấu Chưa thanh toán' : 'Đánh dấu Đã thanh toán'}
+            {draftPaid ? 'Đánh dấu Chưa thanh toán' : 'Đánh dấu Đã thanh toán'}
           </button>
         )}
         <button
@@ -327,7 +360,8 @@ function ClientInvoiceEditor() {
         <button
           type="button"
           onClick={handleSave}
-          className="px-4 py-2 text-sm font-medium text-white bg-gray-900 hover:bg-gray-800 rounded-lg cursor-pointer"
+          disabled={!hasUnsavedChanges}
+          className={`px-4 py-2 text-sm font-medium text-white rounded-lg ${hasUnsavedChanges ? 'bg-gray-900 hover:bg-gray-800 cursor-pointer' : 'bg-gray-300 cursor-not-allowed'}`}
         >
           {isCreateMode ? 'Lưu hóa đơn' : 'Lưu thay đổi'}
         </button>
