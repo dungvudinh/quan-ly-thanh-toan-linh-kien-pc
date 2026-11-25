@@ -84,7 +84,7 @@ function ClientInvoiceEditor() {
         (sum, m) =>
           sum +
           priceFor(m, audience, clientPrices, freelancerPrices) +
-          bonusFor(m, audience, clientPrices, freelancerPrices),
+          (m.bonus ?? bonusFor(m, audience, clientPrices, freelancerPrices)),
         0
       ),
     [draftModels, clientPrices, freelancerPrices]
@@ -304,8 +304,9 @@ function ClientInvoiceEditor() {
               </tr>
             )}
             {draftModels.map((m) => {
+              console.log(m)
               const price = priceFor(m, audience, clientPrices, freelancerPrices);
-              const bonus = bonusFor(m, audience, clientPrices, freelancerPrices);
+              const bonus = m.bonus ?? bonusFor(m, audience, clientPrices, freelancerPrices);
               return (
                 <tr key={m.id} className="border-t border-gray-100">
                   <td className="py-2 pr-3 font-medium text-gray-900">{m.name}</td>

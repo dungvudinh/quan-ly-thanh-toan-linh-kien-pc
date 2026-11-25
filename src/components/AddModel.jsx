@@ -95,6 +95,7 @@ function AddModel({ isOpen, onClose, onAddModel, audience = 'client' }) {
         milestone: Number(formData.milestone) || 0,
         status: formData.status,
         deadline: formData.deadline,
+        hasBonus: formData.deadline === 'OK',
         staff: formData.staff.trim() || 'Chưa phân công',
         // Mặc định chưa thanh toán
         clientPaid: false,
@@ -129,6 +130,9 @@ function AddModel({ isOpen, onClose, onAddModel, audience = 'client' }) {
 
       // Dùng lại model hiện có để giữ đúng thông tin và trạng thái thanh toán.
       Object.assign(newModel, duplicateModel, { id: duplicateModel.id });
+      // The preview's eligibility rule is authoritative when reusing a model
+      // whose stored hasBonus value predates the current invoice flow.
+      newModel.hasBonus = newModel.deadline === 'OK';
     }
 
     // 3. Thêm model vào hóa đơn (draft)

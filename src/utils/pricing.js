@@ -1,5 +1,3 @@
-const BONUS_TYPES = ["Mainboard", "Case", "VGA"];
-
 export function fmtUSD(n) {
   return "$" + Number(n).toLocaleString("en-US");
 }
@@ -32,14 +30,9 @@ export function priceFor(model, audience, clientPrices, freelancerPrices) {
   return p.modular;
 }
 
-/**
- * Bonus chỉ áp dụng khi: trạng thái = New, deadline = OK,
- * và loại thuộc { Mainboard, Case, VGA }.
- */
+/** Bonus chỉ áp dụng khi deadline là OK. */
 export function bonusFor(model, audience, clientPrices, freelancerPrices) {
-  const status = String(model.status || "").toLowerCase().replace(/\s+/g, "");
-  if (status !== "new" || model.deadline !== "OK") return 0;
-  if (!BONUS_TYPES.includes(model.type)) return 0;
+  if ((model.deadline || "OK") !== "OK") return 0;
   const p = audience === "client" ? clientPrices[model.type] : freelancerPrices[model.type];
   if (!p) return 0;
   return audience === "client" ? p.bonus : p.bonus;
