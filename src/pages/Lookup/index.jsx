@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { DeadlineBadge, PaidBadge } from "../../components/Badge.jsx";
+import { DeadlineBadge, InvoiceStatusBadge } from "../../components/Badge.jsx";
 import { fmtUSD, fmtVND } from "../../utils/pricing.js";
 import { api } from "../../services/api.js";
 
@@ -16,10 +16,10 @@ function Index() {
       setIsLoading(true);
       try {
         const queryString = q ? `q=${encodeURIComponent(q)}&` : '';
-        const firstPage = await api(`/models/search?${queryString}inInvoice=true&limit=100&page=1`);
+        const firstPage = await api(`/models/search?${queryString}limit=100&page=1`);
         const remainingPages = await Promise.all(
           Array.from({ length: Math.max(0, firstPage.totalPages - 1) }, (_, index) =>
-            api(`/models/search?${queryString}inInvoice=true&limit=100&page=${index + 2}`)
+            api(`/models/search?${queryString}limit=100&page=${index + 2}`)
           )
         );
         if (active) setMatches([...firstPage.data, ...remainingPages.flatMap((page) => page.data)]);
@@ -101,14 +101,14 @@ function Index() {
             </thead>
             <tbody>
               {isLoading && <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400">Đang tải danh sách model...</td></tr>}
-              {!isLoading && matches.length === 0 && <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400">Không có model nào trong hóa đơn phù hợp.</td></tr>}
+              {!isLoading && matches.length === 0 && <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400">Không tìm thấy model phù hợp.</td></tr>}
               {!isLoading && matches.map((model) => (
                 <tr key={model.id} onClick={() => handleSelect(model)} className={`cursor-pointer border-t border-gray-100 hover:bg-gray-50 ${selected?.id === model.id ? 'bg-gray-50' : ''}`}>
                   <td className="px-4 py-3 font-medium text-gray-900">{model.name}</td>
                   <td className="px-4 py-3 text-gray-500">{model.type}</td>
                   <td className="px-4 py-3 text-gray-500">{model.status}</td>
-                  <td className="px-4 py-3 text-center"><PaidBadge paid={model.clientPaid} paidLabel="Đã thanh toán" pendingLabel="Chưa thanh toán" /></td>
-                  <td className="px-4 py-3 text-center"><PaidBadge paid={model.freelancerPaid} paidLabel="Đã thanh toán" pendingLabel="Chưa thanh toán" /></td>
+                  <td className="px-4 py-3 text-center"><InvoiceStatusBadge status={model.customerInvoiceStatus} /></td>
+                  <td className="px-4 py-3 text-center"><InvoiceStatusBadge status={model.freelancerInvoiceStatus} /></td>
                   <td className="px-4 py-3 text-right font-mono text-gray-700">{model.customerPrice ? `${fmtUSD(model.customerPrice.unit)} + ${fmtUSD(model.customerPrice.bonus)}` : '—'}</td>
                   <td className="px-4 py-3 text-right font-mono text-gray-700">{model.freelancerPrice ? `${fmtVND(model.freelancerPrice.unit)} + ${fmtVND(model.freelancerPrice.bonus)}` : '—'}</td>
                 </tr>
@@ -132,55 +132,49 @@ function Index() {
           </div>
 
           {/* Grid thông tin chi tiết */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2">
             {/* Milestone */}
-            <div className="flex items-center justify-between py-3 px-4 bg-gray-50 rounded-lg">
-              <span className="text-sm font-medium text-gray-500">Milestone</span>
+            <div className="flex items-center justify-start gap-2 py-3 px-4 bg-gray-50 rounded-lg">
+              <span className="text-sm font-medium text-gray-500">Milestone:</span>
               <span className="text-sm font-semibold text-gray-900">{selected.milestone}</span>
             </div>
 
             {/* Trạng thái */}
-            <div className="flex items-center justify-between py-3 px-4 bg-gray-50 rounded-lg">
-              <span className="text-sm font-medium text-gray-500">Trạng thái</span>
+            <div className="flex items-center justify-start gap-2 py-3 px-4 bg-gray-50 rounded-lg">
+              <span className="text-sm font-medium text-gray-500">Trạng thái:</span>
               <span className="text-sm font-semibold text-gray-900">{selected.status}</span>
             </div>
 
             {/* Deadline */}
-            <div className="flex items-center justify-between py-3 px-4 bg-gray-50 rounded-lg">
-              <span className="text-sm font-medium text-gray-500">Deadline</span>
+            <div className="flex items-center justify-start gap-2 py-3 px-4 bg-gray-50 rounded-lg">
+              <span className="text-sm font-medium text-gray-500">Deadline:</span>
               <span className="text-sm font-semibold">
                 <DeadlineBadge status={selected.deadline} />
               </span>
             </div>
 
             {/* Staff */}
-            <div className="flex items-center justify-between py-3 px-4 bg-gray-50 rounded-lg">
-              <span className="text-sm font-medium text-gray-500">Staff</span>
+            <div className="flex items-center justify-start gap-2 py-3 px-4 bg-gray-50 rounded-lg">
+              <span className="text-sm font-medium text-gray-500">Staff:</span>
               <span className="text-sm font-semibold text-gray-900">{selected.staff}</span>
             </div>
 
             {/* Thanh toán khách hàng */}
             <div className="flex items-center justify-between py-3 px-4 bg-gray-50 rounded-lg">
-              <span className="text-sm font-medium text-gray-500">Thanh toán khách hàng</span>
-              <span className="text-sm font-semibold">
-                <PaidBadge 
-                  paid={selected.clientPaid} 
-                  paidLabel="Paid" 
-                  pendingLabel="Not Paid" 
-                />
-              </span>
+              <div className="flex flex-row items-center gap-2">
+                <span className="text-sm font-medium text-gray-500">Hóa đơn khách hàng:</span>
+                <InvoiceStatusBadge status={selected.customerInvoiceStatus} />
+                {selected.customerInvoiceNumber && <span className="rounded-md border border-blue-200 bg-blue-50 px-2 py-1 text-xs font-mono font-semibold text-blue-700">#{selected.customerInvoiceNumber}</span>}
+              </div>
             </div>
 
             {/* Thanh toán freelancer */}
             <div className="flex items-center justify-between py-3 px-4 bg-gray-50 rounded-lg">
-              <span className="text-sm font-medium text-gray-500">Thanh toán freelancer</span>
-              <span className="text-sm font-semibold">
-                <PaidBadge 
-                  paid={selected.freelancerPaid} 
-                  paidLabel="Paid" 
-                  pendingLabel="Not Paid" 
-                />
-              </span>
+              <div className="flex flex-row items-center gap-1">
+                <span className="text-sm font-medium text-gray-500">Hóa đơn freelancer:</span>
+                {selected.freelancerInvoiceNumber && <span className="rounded-md border border-violet-200 bg-violet-50 px-2 py-1 text-xs font-mono font-semibold text-violet-700">#{selected.freelancerInvoiceNumber}</span>}
+                <InvoiceStatusBadge status={selected.freelancerInvoiceStatus} />
+              </div>
             </div>
           </div>
 
