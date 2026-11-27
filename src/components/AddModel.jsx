@@ -52,6 +52,18 @@ function AddModel({ isOpen, onClose, onAddModel, audience = 'client' }) {
    */
   const models = useSelector((state) => state.models);
   const invoices = useSelector((state) => state.invoices.list);
+  const invoiceType = audience === 'client' ? 'customer' : 'freelancer';
+
+  const selectSuggestion = (model) => {
+    setFormData({
+      name: model.name,
+      type: model.type || '',
+      status: String(model.status || 'new').toLowerCase().replace(/\s+/g, ''),
+      milestone: model.milestone ?? 0,
+      deadline: model.deadline || 'OK',
+      staff: model.staff || '',
+    });
+  };
   const findDuplicateModel = (model) => {
     const normalizedName = model.name.trim().toLowerCase();
     return (
@@ -72,6 +84,15 @@ function AddModel({ isOpen, onClose, onAddModel, audience = 'client' }) {
       ) ?? null
     );
   };
+
+  const nameSuggestions = formData.name.trim()
+    ? models
+      .filter((model) =>
+        model.name?.toLowerCase().includes(formData.name.trim().toLowerCase()) &&
+        !findInvoiceContainingModel(model.id, invoiceType)
+      )
+      .slice(0, 8)
+    : [];
 
   /**
    * Tạo object model từ form + validate.
@@ -118,7 +139,6 @@ function AddModel({ isOpen, onClose, onAddModel, audience = 'client' }) {
     // Model được dùng lại giữa hai loại hóa đơn, nhưng không được lặp
     // trong hai hóa đơn cùng loại.
     const duplicateModel = findDuplicateModel(newModel);
-    const invoiceType = audience === 'client' ? 'customer' : 'freelancer';
     if (duplicateModel) {
       const invoice = findInvoiceContainingModel(duplicateModel.id, invoiceType);
       if (invoice) {
@@ -173,6 +193,21 @@ function AddModel({ isOpen, onClose, onAddModel, audience = 'client' }) {
               className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900/10"
               required
             />
+            {nameSuggestions.length > 0 && (
+              <div className="mt-1 max-h-48 overflow-y-auto rounded-lg border border-gray-200 bg-white py-1 shadow-lg">
+                {nameSuggestions.map((model) => (
+                  <button
+                    key={model.id}
+                    type="button"
+                    onClick={() => selectSuggestion(model)}
+                    className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm hover:bg-gray-50"
+                  >
+                    <span className="truncate font-medium text-gray-800">{model.name}</span>
+                    <span className="shrink-0 text-xs text-gray-400">{model.type}</span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           <div>
